@@ -22,11 +22,12 @@ For a complete up-to-date list of supported file formats, conversions and other 
 
 * User account at ConvertAPI.com
 * SAP NetWeaver 7.4 or later
+* abapGit is required for ConvertAPI client installation and updates. Please visit https://abapgit.org/ for more information.
 * The SSL certificate of Root Certification Authority of https://v2.convertapi.com must be imported into relevant *SSL Client Identity* for ConvertAPI client to be able to connect to the sevice (transaction STRUST, identity ANONYM or a custom one should be used).
 
 > **Note:** Please make sure to add the root CA certificate of https://v2.convertapi.com sepecifically and not https://www.convertapi.com as they may have different root CAs.
 
-* Additional security settings may be required based on your particular SAP system, landscape and network setup. Please consult with your BASIS team regarding the requirments for your ABAP application server to access a public HTTPS services.
+* Additional security settings may be required based on your particular SAP system, landscape and network setup. Please consult with your BASIS team regarding the requirments for your ABAP application server to access a public HTTPS service.
 
 # ConvertAPI client API
 
