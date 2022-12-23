@@ -28,10 +28,11 @@ For a complete up-to-date list of supported file formats, conversions and other 
 
 * Additional security settings may be required based on your particular SAP system, landscape and network setup. Please consult with your BASIS team regarding the requirments for your ABAP application server to access a public HTTPS services.
 
-## ConvertAPI client API
+# ConvertAPI client API
 
-### Creating ConvertAPI client instance
-#### **zcl_convertapi_client=>create**
+## Creating ConvertAPI client instance
+
+### **zcl_convertapi_client=>create**
 Static factory method to create new ConvertAPI client instance.
 
 | Parameter |  Description |
