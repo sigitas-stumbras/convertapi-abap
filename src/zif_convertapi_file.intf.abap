@@ -3,11 +3,11 @@ INTERFACE zif_convertapi_file
 
   METHODS upload.
 
-  METHODS delete.
+  METHODS delete_service_side_copy.
 
   METHODS get_content
     RETURNING
-      VALUE(rv_content) TYPE xstring .
+      VALUE(rv_content) TYPE xstring.
 
   METHODS get_size
     RETURNING
@@ -17,7 +17,11 @@ INTERFACE zif_convertapi_file
     RETURNING
       VALUE(rv_id) TYPE string .
 
-  METHODS get_url
+  METHODS get_convertapi_url
+    RETURNING
+      VALUE(rv_url) TYPE string .
+
+  METHODS get_external_url
     RETURNING
       VALUE(rv_url) TYPE string .
 

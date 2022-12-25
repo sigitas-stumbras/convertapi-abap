@@ -1,15 +1,21 @@
+CLASS lcl_client_test DEFINITION DEFERRED.
+CLASS zcl_convertapi_client DEFINITION LOCAL FRIENDS lcl_client_test.
+
 CLASS lcl_client_test DEFINITION FOR TESTING
     RISK LEVEL HARMLESS
     DURATION SHORT.
 
   PUBLIC SECTION.
-    METHODS: upload_download_delete FOR TESTING.
-    METHODS: covert_1px_gif_to_webp FOR TESTING.
+    METHODS: conversion_parameters_test      FOR TESTING.
+    METHODS: upload_download_delete          FOR TESTING.
+    METHODS: covert_w_remote_storing  FOR TESTING.
+    METHODS: covert_no_remote_storing FOR TESTING.
 
   PRIVATE SECTION.
     CLASS-DATA: m_api_key      TYPE string.
     CLASS-DATA: m_api_secret   TYPE string.
-    CLASS-DATA: mo_http_client TYPE REF TO IF_HTTP_CLIENT.
+    CLASS-DATA: mo_http_client TYPE REF TO if_http_client.
+    CLASS-DATA: m_log_handle   TYPE balloghndl.
 
     CONSTANTS c_pixel_gif   TYPE xstring VALUE '47494638376101000100800100000000FFFFFF2C00000000010001000002024C01003B'.                   " 1 white pixel GIF image
     CONSTANTS c_pixel_webp  TYPE xstring VALUE '52494646240000005745425056503820180000003001009D012A0100010002003425A400037000FEFB940000'. " 1 white pixel WEBP image
@@ -21,15 +27,29 @@ CLASS lcl_client_test DEFINITION FOR TESTING
     METHODS: setup.
     METHODS: teardown.
 
+    METHODS: direct_download
+      IMPORTING
+        io_convertapi_client        TYPE REF TO zcl_convertapi_client
+        iv_url                TYPE string
+      RETURNING
+        VALUE(rv_status_code) TYPE integer.
+
+    METHODS: covert_1px_gif_to_webp_priv
+      IMPORTING
+        io_client     TYPE REF TO zif_convertapi_client
+        iv_msg_prefix TYPE string.
+
 ENDCLASS.                    "lcl_client_test DEFINITION
 
 
 CLASS lcl_client_test IMPLEMENTATION.
   METHOD class_setup.
-"----------------------------------------------------------------------------------------------
+
+    DATA: ls_log TYPE bal_s_log.
+    "----------------------------------------------------------------------------------------------
     m_api_key    = '947226456'.
     m_api_secret = '5EI6bEJ7TKH4J4PQ'.
-"----------------------------------------------------------------------------------------------
+    "----------------------------------------------------------------------------------------------
 
     cl_http_client=>create_by_url(
       EXPORTING
@@ -41,16 +61,60 @@ CLASS lcl_client_test IMPLEMENTATION.
         argument_not_found = 1
         plugin_not_active  = 2
         internal_error     = 3
-        others             = 4
+        OTHERS             = 4
     ).
     IF sy-subrc <> 0.
-     MESSAGE 'Could not create HTTP client - RC=' && sy-subrc TYPE 'E'.
+      MESSAGE 'Could not create HTTP client - RC=' && sy-subrc TYPE 'E'.
+    ENDIF.
+
+    ls_log-object    = 'ZCONVERTAPI'.
+    ls_log-subobject = 'UNITTEST'.
+    ls_log-aluser    = sy-uname.
+    ls_log-alprog    = sy-repid.
+
+    CALL FUNCTION 'BAL_LOG_CREATE'
+      EXPORTING
+        i_s_log                 = ls_log
+      IMPORTING
+        e_log_handle            = m_log_handle    " Log handle
+      EXCEPTIONS
+        log_header_inconsistent = 1
+        OTHERS                  = 2.
+    IF sy-subrc <> 0.
+      MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
     ENDIF.
 
   ENDMETHOD.
 
   METHOD class_teardown.
+    DATA: lt_log_handle TYPE bal_t_logh.
+
+    APPEND m_log_handle TO lt_log_handle.
+
     mo_http_client->close( ).
+    IF m_log_handle IS NOT INITIAL.
+      CALL FUNCTION 'BAL_DB_SAVE'
+        EXPORTING
+*         i_client         = SY-MANDT    " Client in which the new log is to be saved
+*         i_in_update_task = SPACE    " Save in UPDATE TASK
+          i_save_all       = 'X'    " Save all logs in memory
+          i_t_log_handle   = lt_log_handle    " Table of log handles
+*         i_2th_connection = SPACE    " FALSE: No secondary connection
+*         i_2th_connect_commit = SPACE    " FALSE: No COMMIT in module
+*         i_link2job       = 'X'    " Boolean Variable (X=true, -=false, space=unknown)
+*       IMPORTING
+*         e_new_lognumbers =     " Table of new log numbers
+*         e_second_connection  =     " Name of Secondary Connection
+        EXCEPTIONS
+          log_not_found    = 1
+          save_not_allowed = 2
+          numbering_error  = 3
+          OTHERS           = 4.
+      IF sy-subrc <> 0.
+        MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+      ENDIF.
+    ENDIF.
+
   ENDMETHOD.
 
   METHOD setup.
@@ -59,30 +123,168 @@ CLASS lcl_client_test IMPLEMENTATION.
   METHOD teardown.
   ENDMETHOD.
 
+  METHOD conversion_parameters_test.
+    DATA lo_client TYPE REF TO zif_convertapi_client.
+    DATA lo_conversion TYPE REF TO zif_convertapi_conversion.
+
+    lo_client = zcl_convertapi_client=>create(
+        iv_api_key = m_api_key
+        iv_api_secret = m_api_secret
+        io_http_client = mo_http_client
+        iv_service_side_storage = abap_false
+        iv_log_handle = m_log_handle
+      ).
+
+    lo_conversion = lo_client->create_conversion(
+      iv_target_format = 'pdf'
+    ).
+
+    cl_abap_unit_assert=>assert_equals(
+      EXPORTING
+        act                  = lo_conversion->get_result_format(  )
+        exp                  = 'pdf'
+        msg                  = 'Conversion target format has unexpected value'
+    ).
+
+    lo_conversion->set_parameter(
+      EXPORTING
+        iv_name      = zif_convertapi_client=>c_param-store_file
+        iv_value     = 'true'
+    ).
+
+    cl_abap_unit_assert=>assert_equals(
+      EXPORTING
+        act                  = lo_conversion->get_parameter( zif_convertapi_client=>c_param-store_file )
+        exp                  = 'true'
+        msg                  = 'Conversion - set/get single parameter fail'
+    ).
+
+    lo_conversion->set_parameter(
+      EXPORTING
+        iv_name      = zif_convertapi_client=>c_param-store_file
+        iv_value     = 'false'
+        iv_overwrite = abap_false
+    ).
+
+    cl_abap_unit_assert=>assert_equals(
+      EXPORTING
+        act                  = lo_conversion->get_parameter( zif_convertapi_client=>c_param-store_file )
+        exp                  = 'true'
+        msg                  = 'Conversion - set single parameter no-overwriting fail'
+    ).
+
+    lo_conversion->set_parameter(
+      EXPORTING
+        iv_name      = zif_convertapi_client=>c_param-store_file
+        iv_value     = 'false'
+        iv_overwrite = abap_true
+    ).
+
+    cl_abap_unit_assert=>assert_equals(
+       EXPORTING
+         act                  = lo_conversion->get_parameter( zif_convertapi_client=>c_param-store_file )
+         exp                  = 'false'
+         msg                  = 'Conversion - set single parameter overwriting fail'
+     ).
+
+    lo_conversion->clear_parameter( zif_convertapi_client=>c_param-store_file ).
+
+    cl_abap_unit_assert=>assert_equals(
+      EXPORTING
+        act                  = lo_conversion->get_parameter( zif_convertapi_client=>c_param-store_file )
+        exp                  = ''
+        msg                  = 'Conversion clear single parameter fail'
+    ).
+
+    lo_conversion->set_parameters(
+      EXPORTING
+        it_parameters = VALUE #(
+            (  name = zif_convertapi_client=>c_param-store_file value = 'true' )
+            (  name = zif_convertapi_client=>c_param-timeout    value = '1' )
+         )
+    ).
+
+    cl_abap_unit_assert=>assert_table_contains(
+      EXPORTING
+        line             = VALUE zif_convertapi_conversion=>sty_parameter( name = zif_convertapi_client=>c_param-store_file value = 'true'  )
+        table            = lo_conversion->get_parameters( )
+        msg              = 'Conversion - set/get multiple parameters fail'
+    ).
+
+    lo_conversion->set_parameters(
+       EXPORTING
+         it_parameters = VALUE #(
+             ( name = zif_convertapi_client=>c_param-store_file value = 'false' )
+           )
+         iv_overwrite = abap_false
+     ).
+
+    cl_abap_unit_assert=>assert_table_contains(
+      EXPORTING
+        line             = VALUE zif_convertapi_conversion=>sty_parameter( name = zif_convertapi_client=>c_param-store_file value = 'true'  )
+        table            = lo_conversion->get_parameters( )
+        msg              = 'Conversion - set multiple parameters no-overwriting fail'
+    ).
+
+    lo_conversion->set_parameters(
+       EXPORTING
+         it_parameters = VALUE #(
+             (  name = zif_convertapi_client=>c_param-timeout    value = '2' )
+           )
+         iv_overwrite = abap_true
+     ).
+
+    cl_abap_unit_assert=>assert_table_contains(
+      EXPORTING
+        line             = VALUE zif_convertapi_conversion=>sty_parameter(  name = zif_convertapi_client=>c_param-timeout    value = '2' )
+        table            = lo_conversion->get_parameters( )
+        msg              =  'Conversion - set multiple parameters overwriting fail'
+    ).
+
+  ENDMETHOD.
+
   METHOD upload_download_delete.
 
-    DATA lo_client TYPE REF TO zcl_convertapi_client.
-    DATA lv_file_id TYPE zcl_convertapi_client=>ty_file_id.
+    DATA lo_client TYPE REF TO zif_convertapi_client.
+    DATA lv_file_id TYPE zif_convertapi_client=>ty_file_id.
     DATA lv_file_name TYPE string.
     DATA lv_file_ext TYPE string.
     DATA lv_downloaded_content TYPE xstring.
+    DATA lv_downloaded_content_2 TYPE xstring.
+    DATA lv_downloaded_content_3 TYPE xstring.
+    DATA lo_file TYPE REF TO zif_convertapi_file.
 
-    lo_client = NEW zcl_convertapi_client(
-        im_api_key = m_api_key
-        im_api_secret = m_api_secret
-        im_http_client = mo_http_client
-        im_service_side_storage = abap_true
+    lo_client = zcl_convertapi_client=>create(
+        iv_api_key = m_api_key
+        iv_api_secret = m_api_secret
+        io_http_client = mo_http_client
+        iv_service_side_storage = abap_false
+        iv_log_handle = m_log_handle
       ).
 
-    DATA(lo_file) = lo_client->upload(
-        im_file_name    = 'píẍẽl.gif'
-        im_file_content = c_pixel_gif
+    lo_file ?= lo_client->create_file(
+        iv_name    = 'píẍẽl.gif'
+        iv_content = c_pixel_gif
     ).
+
+    DATA(lo_file_2) = lo_client->create_file(
+        iv_name    = 'píxel.gif'
+        iv_content = c_pixel_gif
+    ).
+
+    DATA(lo_file_3) = lo_client->create_file_from_url(
+       iv_url  = 'https://www.convertapi.com/static/img/logo.svg'
+       iv_name = 'logo.svg'
+    ).
+
+    lo_file->upload(  ).
+
+    lo_file_3->upload(  ).
 
     cl_abap_unit_assert=>assert_not_initial(
       EXPORTING
-         act = lo_file->get_id( )
-         msg = 'Should return file id after upload'
+         act = lo_file->get_convertapi_url(  )
+         msg = 'Should return file url after create upload'
     ).
 
     lv_downloaded_content = lo_file->get_content( ).
@@ -93,84 +295,126 @@ CLASS lcl_client_test IMPLEMENTATION.
         msg = 'Downloaded content not equal to uploaded'
     ).
 
-    lo_file->delete( ).
+    lv_downloaded_content_2 = lo_file_2->get_content( ).
 
-    TRY.
-      lv_downloaded_content = lo_file->get_content( ).
-      cl_abap_unit_assert=>fail(
-          msg    = 'Should not be able to download deleted file'
-      ).
-    CATCH zcx_convertapi_service.
-    CATCH zcx_convertapi_client.
-    ENDTRY.
+    lv_downloaded_content_3 = lo_file_3->get_content( ).
+
+    DATA lv_url TYPE string.
+    DATA lv_status_code TYPE integer.
+    DATA lo_client_inst TYPE REF TO zcl_convertapi_client.
+
+    lv_url = lo_file->get_convertapi_url(  ).
+
+    lo_file->delete_service_side_copy( ).
+
+    lo_client_inst ?= lo_client.
+    lv_status_code = direct_download( io_convertapi_client = lo_client_inst iv_url = lv_url ).
+
+    cl_abap_unit_assert=>assert_equals(
+        act = lv_status_code
+        exp = 404
+        msg = 'Get did not return 404 after file deletion'
+    ).
+
+    lo_client->cleanup(  ).
 
   ENDMETHOD.
 
-  METHOD covert_1px_gif_to_webp.
+  METHOD covert_w_remote_storing.
 
-    DATA lo_client TYPE REF TO zcl_convertapi_client.
+    DATA lo_client TYPE REF TO zif_convertapi_client.
 
+    lo_client = zcl_convertapi_client=>create(
+        iv_api_key = m_api_key
+        iv_api_secret = m_api_secret
+        io_http_client = mo_http_client
+        iv_service_side_storage = abap_true
+        iv_log_handle = m_log_handle
+      ).
+
+    covert_1px_gif_to_webp_priv(
+        io_client     = lo_client
+        iv_msg_prefix = `REMOTE:`
+    ).
+
+    lo_client->cleanup(  ).
+
+  ENDMETHOD.
+
+  METHOD covert_no_remote_storing.
+
+    DATA lo_client TYPE REF TO zif_convertapi_client.
+
+    lo_client = zcl_convertapi_client=>create(
+        iv_api_key = m_api_key
+        iv_api_secret = m_api_secret
+        io_http_client = mo_http_client
+        iv_service_side_storage = abap_false
+        iv_log_handle = m_log_handle
+      ).
+
+    covert_1px_gif_to_webp_priv(
+        io_client     = lo_client
+        iv_msg_prefix = `LOCAL:`
+    ).
+
+    lo_client->cleanup(  ).
+
+  ENDMETHOD.
+
+  METHOD covert_1px_gif_to_webp_priv.
+
+    DATA lo_input_file    TYPE REF TO zif_convertapi_file.
+    DATA lo_result_file   TYPE REF TO zif_convertapi_file.
     DATA lv_result        TYPE xstring.
     DATA lv_result_header TYPE xstring.
 
-    lo_client = NEW zcl_convertapi_client(
-        im_api_secret = m_api_secret
-        im_api_key    = m_api_key
-        im_http_client = mo_http_client
-      ).
-
-
-    DATA(lo_file) = lo_client->upload(
-        im_file_name    = 'pixel.gif'
-        im_file_content = c_pixel_gif
+    lo_input_file = io_client->create_file(
+        iv_name    = 'pixel.gif'
+        iv_content = c_pixel_gif
     ).
 
-    DATA(lo_to_webp_params) = NEW zcl_convertapi_conversion( 'webp' ).
+    lo_result_file = lo_input_file->convert_to( 'webp' ).
 
-*    DATA(lo_to_webp_params) = NEW zcl_convertapi_conversion(
-*        im_result_format = 'webp'
-*        im_parameters = VALUE #(
-*            ( name = 'ColorSpace'         value = 'gray' )
-*            ( name = 'ImageQuality '      value = '100' )
-*            ( name = 'ImageInterpolation' value = 'true' )
-*          )
-*        ).
-*
-*    DATA(lo_converted) = lo_file->convert_to( lo_to_webp_params ).
-*
-    lo_client->convert(
-        EXPORTING
-          im_source = lo_file
-          im_parameters = lo_to_webp_params
-*        IMPORTING
-*          ex_result_file =
-*          ex_result_files =
-     ).
+    cl_abap_unit_assert=>assert_bound(
+        act = lo_result_file
+        msg = iv_msg_prefix && 'file->convert_to did not return file object'
+    ).
 
+    lv_result = lo_result_file->get_content(  ).
 
-*
-*    lo_client->convert(
-*      EXPORTING
-*        im_source_format = 'gif'
-*        im_result_format = 'webp'
-*        im_source_content = c_pixel_gif
-*      IMPORTING
-*        ex_result_content = lv_result
-*    ).
-*
-*    cl_abap_unit_assert=>assert_not_initial(
-*        act = lv_result
-*        msg = '1px GIF->WEBP: Convertion result empty'
-*    ).
-*
-*    lv_result_header = lv_result+0(4).
-*
-*    cl_abap_unit_assert=>assert_equals(
-*        act = lv_result_header
-*        exp = c_webp_header
-*        msg = '1px GIF->WEBP: Convertion result unrecognized'
-*    ).
+    cl_abap_unit_assert=>assert_not_initial(
+        act = lv_result
+        msg = iv_msg_prefix && '1px GIF->WEBP: Convertion result empty'
+    ).
 
+    lv_result_header = lv_result+0(4).
+
+    cl_abap_unit_assert=>assert_equals(
+        act = lv_result_header
+        exp = c_webp_header
+        msg = iv_msg_prefix && '1px GIF->WEBP: Convertion result unrecognized as WEBP'
+    ).
+
+  ENDMETHOD.
+
+  METHOD direct_download.
+
+    cl_http_utility=>set_request_uri(
+      request = io_convertapi_client->mo_http_client->request
+      uri     = iv_url ).
+
+    io_convertapi_client->mo_http_client->request->set_version( version = mo_http_client->request->co_protocol_version_1_1 ).
+    io_convertapi_client->mo_http_client->request->set_method( method = zcl_convertapi_client=>c_request_method-get ).
+    io_convertapi_client->add_authorization_credentials( io_convertapi_client->mo_http_client->request ).
+
+    io_convertapi_client->mo_http_client->send( EXCEPTIONS OTHERS = 4 ).
+    CHECK sy-subrc = 0.
+
+    io_convertapi_client->mo_http_client->receive( EXCEPTIONS OTHERS = 4 ).
+    CHECK sy-subrc = 0.
+
+    io_convertapi_client->mo_http_client->response->get_status( IMPORTING code = rv_status_code ).
   ENDMETHOD.
 
 ENDCLASS.                    "lcl_client_test IMPLEMENTATION

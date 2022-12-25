@@ -17,11 +17,6 @@
      <DESCRIPT>Conversion</DESCRIPT>
     </SEOCOMPOTX>
     <SEOCOMPOTX>
-     <CMPNAME>DELETE</CMPNAME>
-     <LANGU>E</LANGU>
-     <DESCRIPT>Delete the service-side copy of the file</DESCRIPT>
-    </SEOCOMPOTX>
-    <SEOCOMPOTX>
      <CMPNAME>GET_CONTENT</CMPNAME>
      <LANGU>E</LANGU>
      <DESCRIPT>Get file content as binary (xstring)</DESCRIPT>
