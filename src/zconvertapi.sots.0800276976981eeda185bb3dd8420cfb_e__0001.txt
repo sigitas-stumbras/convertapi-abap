@@ -1,0 +1,3 @@
+HTTP &HTTP_CODE& error
+&CODE& - &MESSAGE&
+&RESPONSE&

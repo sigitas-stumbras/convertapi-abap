@@ -13,7 +13,9 @@ INTERFACE zif_convertapi_conversion
     IMPORTING
       i_source        TYPE any
     RETURNING
-      VALUE(rt_files) TYPE zif_convertapi_client=>tty_files.
+      VALUE(rt_files) TYPE zif_convertapi_client=>tty_files
+    RAISING
+      zcx_convertapi_exception.
 
   METHODS get_parameter
     IMPORTING
@@ -38,10 +40,18 @@ INTERFACE zif_convertapi_conversion
 
   METHODS clear_parameter
     IMPORTING
-      !iv_name      TYPE string.
+      !iv_name TYPE string.
 
   METHODS get_result_format
     RETURNING
       VALUE(rv_result_format) TYPE string.
+
+  METHODS get_source_format
+    IMPORTING
+      it_files TYPE zif_convertapi_client=>tty_files
+    RETURNING
+      VALUE(rv_source_format) TYPE string
+    RAISING
+      zcx_convertapi_exception.
 
 ENDINTERFACE.

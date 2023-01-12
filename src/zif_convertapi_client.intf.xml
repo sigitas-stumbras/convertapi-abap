@@ -10,6 +10,38 @@
     <STATE>1</STATE>
     <UNICODE>X</UNICODE>
    </VSEOINTERF>
+   <DESCRIPTIONS_SUB>
+    <SEOSUBCOTX>
+     <CMPNAME>CREATE_FILE_FROM_FS</CMPNAME>
+     <SCONAME>IV_FILENAME</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Override physcal filename with this name for service use</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>CREATE_FILE_FROM_FS</CMPNAME>
+     <SCONAME>IV_PHYSICAL_FILE</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Physical filename with path</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>CREATE_FILE_FROM_FS</CMPNAME>
+     <SCONAME>RO_FILE</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>New ConvertAPI file instance</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>CREATE_FILE_FROM_URL</CMPNAME>
+     <SCONAME>IV_NAME</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Filename for service use</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>CREATE_FILE_FROM_URL</CMPNAME>
+     <SCONAME>IV_URL</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>File URL that can be accessed by ConvertAPI service</DESCRIPT>
+    </SEOSUBCOTX>
+   </DESCRIPTIONS_SUB>
   </asx:values>
  </asx:abap>
 </abapGit>

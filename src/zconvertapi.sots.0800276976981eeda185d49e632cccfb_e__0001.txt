@@ -1,0 +1,4 @@
+HTTP error &HTTP_CODE& 
+ConvertAPI error &CODE& - &MESSAGE&
+
+&RESPONSE&

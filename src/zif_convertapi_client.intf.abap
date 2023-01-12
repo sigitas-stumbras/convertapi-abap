@@ -1,62 +1,74 @@
-INTERFACE zif_convertapi_client
-  PUBLIC .
+interface ZIF_CONVERTAPI_CLIENT
+  public .
 
-  CONSTANTS: version TYPE string VALUE '0.0.1'.
 
-  CONSTANTS:
-    BEGIN OF c_param,
-      file                           TYPE string VALUE 'File',
-      files                          TYPE string VALUE 'Files',
-      store_file                     TYPE string VALUE 'StoreFile',
-      timeout                        TYPE string VALUE 'Timeout',
-    END OF c_param.
-
-  TYPES ty_file_id TYPE string .
-  TYPES tty_files TYPE TABLE OF REF TO zif_convertapi_file WITH EMPTY KEY.
-
-  TYPES: BEGIN OF sty_parameter,
+  types TY_STORAGE_MODE type INTEGER .
+  types TY_FILE_ID type STRING .
+  types:
+    tty_files      TYPE TABLE OF REF TO zif_convertapi_file WITH EMPTY KEY .
+  types:
+    BEGIN OF sty_parameter,
            name  TYPE string,
            value TYPE string,
-         END OF sty_parameter.
+         END OF sty_parameter .
+  types:
+    tty_parameters TYPE STANDARD TABLE OF sty_parameter WITH KEY name .
 
-  TYPES tty_parameters TYPE STANDARD TABLE OF sty_parameter WITH KEY name.
+  constants VERSION type STRING value '0.0.1' ##NO_TEXT.
+  constants:
+    BEGIN OF c_param,
+      file       TYPE string VALUE 'File',
+      files      TYPE string VALUE 'Files',
+      store_file TYPE string VALUE 'StoreFile',
+      timeout    TYPE string VALUE 'Timeout',
+    END OF c_param .
+  constants:
+    BEGIN OF c_storage_mode,
+      use_service_storage TYPE ty_storage_mode VALUE 1,
+      no_service_storage  TYPE ty_storage_mode VALUE 2,
+      manual              TYPE ty_storage_mode VALUE 3,
+    END OF c_storage_mode .
 
-  METHODS create_file
-    IMPORTING
-      iv_name        TYPE string
-      iv_content     TYPE xstring
-    RETURNING
-      VALUE(ro_file) TYPE REF TO zif_convertapi_file.
-
-  METHODS create_file_from_url
-    IMPORTING
-      iv_url         TYPE string
-      iv_name        TYPE string
-    RETURNING
-      VALUE(ro_file) TYPE REF TO zif_convertapi_file.
-
-  METHODS create_conversion
-    IMPORTING
-      iv_target_format     TYPE string
-      it_parameters        TYPE zif_convertapi_client=>tty_parameters OPTIONAL
-    RETURNING
-      VALUE(ro_conversion) TYPE REF TO zif_convertapi_conversion.
-
-  METHODS convert
-    IMPORTING
-      !i_source              TYPE any
-      !io_conversion         TYPE REF TO zcl_convertapi_conversion
-    RETURNING
-      VALUE(rt_target_files) TYPE zif_convertapi_client=>tty_files.
-
-  METHODS set_auto_cleanup
-    IMPORTING
-      iv_enabled           TYPE abap_bool.
-
-  METHODS get_auto_cleanup
-    RETURNING
-        VALUE(rv_enabled)  TYPE abap_bool.
-
-  METHODS cleanup.
-
-ENDINTERFACE.
+  methods CREATE_FILE
+    importing
+      !IV_NAME type STRING
+      !IV_CONTENT type XSTRING
+    returning
+      value(RO_FILE) type ref to ZIF_CONVERTAPI_FILE
+    raising
+      ZCX_CONVERTAPI_EXCEPTION .
+  methods CREATE_FILE_FROM_FS
+    importing
+      !IV_PHYSICAL_FILE type STRING
+      !IV_FILENAME type STRING optional
+    returning
+      value(RO_FILE) type ref to ZIF_CONVERTAPI_FILE
+    raising
+      ZCX_CONVERTAPI_EXCEPTION .
+  methods CREATE_FILE_FROM_URL
+    importing
+      !IV_URL type STRING
+      !IV_NAME type STRING
+    returning
+      value(RO_FILE) type ref to ZIF_CONVERTAPI_FILE
+    raising
+      ZCX_CONVERTAPI_EXCEPTION .
+  methods CREATE_CONVERSION
+    importing
+      !IV_TARGET_FORMAT type STRING
+      !IV_SOURCE_FORMAT type STRING optional
+      !IT_PARAMETERS type ZIF_CONVERTAPI_CLIENT=>TTY_PARAMETERS optional
+    returning
+      value(RO_CONVERSION) type ref to ZIF_CONVERTAPI_CONVERSION
+    raising
+      ZCX_CONVERTAPI_EXCEPTION .
+  methods SET_AUTO_CLEANUP
+    importing
+      !IV_ENABLED type ABAP_BOOL .
+  methods GET_AUTO_CLEANUP
+    returning
+      value(RV_ENABLED) type ABAP_BOOL .
+  methods CLEANUP
+    raising
+      ZCX_CONVERTAPI_EXCEPTION .
+endinterface.

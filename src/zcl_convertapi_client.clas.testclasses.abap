@@ -1,25 +1,31 @@
-CLASS lcl_client_test DEFINITION DEFERRED.
-CLASS zcl_convertapi_client DEFINITION LOCAL FRIENDS lcl_client_test.
+CLASS ltc_client_test DEFINITION DEFERRED.
+CLASS zcl_convertapi_client DEFINITION LOCAL FRIENDS ltc_client_test.
 
-CLASS lcl_client_test DEFINITION FOR TESTING
+CLASS ltc_client_test DEFINITION FOR TESTING
     RISK LEVEL HARMLESS
     DURATION SHORT.
 
   PUBLIC SECTION.
-    METHODS: conversion_parameters_test      FOR TESTING.
-    METHODS: upload_download_delete          FOR TESTING.
-    METHODS: covert_w_remote_storing  FOR TESTING.
-    METHODS: covert_no_remote_storing FOR TESTING.
+    METHODS: conversion_parameters_test     FOR TESTING RAISING zcx_convertapi_exception.
+    METHODS: upload_download_delete         FOR TESTING RAISING zcx_convertapi_exception.
+    METHODS: covert_w_remote_storing        FOR TESTING RAISING zcx_convertapi_exception.
+    METHODS: covert_no_remote_storing       FOR TESTING RAISING zcx_convertapi_exception.
+    METHODS: multi_input_w_remote_storing   FOR TESTING RAISING zcx_convertapi_exception.
+    METHODS: multi_input_no_remote_storing  FOR TESTING RAISING zcx_convertapi_exception.
+    METHODS: multi_output_w_remote_storing  FOR TESTING RAISING zcx_convertapi_exception.
+    METHODS: multi_output_no_remote_storing FOR TESTING RAISING zcx_convertapi_exception.
+
 
   PRIVATE SECTION.
     CLASS-DATA: m_api_key      TYPE string.
     CLASS-DATA: m_api_secret   TYPE string.
-    CLASS-DATA: mo_http_client TYPE REF TO if_http_client.
+    CLASS-DATA: http_client TYPE REF TO if_http_client.
     CLASS-DATA: m_log_handle   TYPE balloghndl.
 
     CONSTANTS c_pixel_gif   TYPE xstring VALUE '47494638376101000100800100000000FFFFFF2C00000000010001000002024C01003B'.                   " 1 white pixel GIF image
     CONSTANTS c_pixel_webp  TYPE xstring VALUE '52494646240000005745425056503820180000003001009D012A0100010002003425A400037000FEFB940000'. " 1 white pixel WEBP image
     CONSTANTS c_webp_header TYPE xstring VALUE '52494646'.                                                                                 " WEBP image header
+    CONSTANTS c_zip_header  TYPE xstring VALUE '504B0304'.                                                                                 " ZIP file header
 
     CLASS-METHODS: class_setup.
     CLASS-METHODS: class_teardown.
@@ -29,7 +35,7 @@ CLASS lcl_client_test DEFINITION FOR TESTING
 
     METHODS: direct_download
       IMPORTING
-        io_convertapi_client        TYPE REF TO zcl_convertapi_client
+        io_convertapi_client  TYPE REF TO zcl_convertapi_client
         iv_url                TYPE string
       RETURNING
         VALUE(rv_status_code) TYPE integer.
@@ -37,12 +43,28 @@ CLASS lcl_client_test DEFINITION FOR TESTING
     METHODS: covert_1px_gif_to_webp_priv
       IMPORTING
         io_client     TYPE REF TO zif_convertapi_client
-        iv_msg_prefix TYPE string.
+        iv_msg_prefix TYPE string
+      RAISING
+        zcx_convertapi_exception.
 
-ENDCLASS.                    "lcl_client_test DEFINITION
+    METHODS: covert_1_to_n
+      IMPORTING
+        io_client     TYPE REF TO zif_convertapi_client
+        iv_msg_prefix TYPE string
+      RAISING
+        zcx_convertapi_exception.
+
+    METHODS: covert_2xgif_to_zip
+      IMPORTING
+        io_client     TYPE REF TO zif_convertapi_client
+        iv_msg_prefix TYPE string
+      RAISING
+        zcx_convertapi_exception.
+
+ENDCLASS.                    "ltc_client_test DEFINITION
 
 
-CLASS lcl_client_test IMPLEMENTATION.
+CLASS ltc_client_test IMPLEMENTATION.
   METHOD class_setup.
 
     DATA: ls_log TYPE bal_s_log.
@@ -56,7 +78,7 @@ CLASS lcl_client_test IMPLEMENTATION.
         url               =  'https://v2.convertapi.com:443'
         ssl_id            = 'ANONYM'
       IMPORTING
-        client             = mo_http_client
+        client             = http_client
       EXCEPTIONS
         argument_not_found = 1
         plugin_not_active  = 2
@@ -91,7 +113,7 @@ CLASS lcl_client_test IMPLEMENTATION.
 
     APPEND m_log_handle TO lt_log_handle.
 
-    mo_http_client->close( ).
+    http_client->close( ).
     IF m_log_handle IS NOT INITIAL.
       CALL FUNCTION 'BAL_DB_SAVE'
         EXPORTING
@@ -130,8 +152,8 @@ CLASS lcl_client_test IMPLEMENTATION.
     lo_client = zcl_convertapi_client=>create(
         iv_api_key = m_api_key
         iv_api_secret = m_api_secret
-        io_http_client = mo_http_client
-        iv_service_side_storage = abap_false
+        io_http_client = http_client
+        iv_storage_mode = zif_convertapi_client=>c_storage_mode-no_service_storage
         iv_log_handle = m_log_handle
       ).
 
@@ -257,8 +279,8 @@ CLASS lcl_client_test IMPLEMENTATION.
     lo_client = zcl_convertapi_client=>create(
         iv_api_key = m_api_key
         iv_api_secret = m_api_secret
-        io_http_client = mo_http_client
-        iv_service_side_storage = abap_false
+        io_http_client = http_client
+        iv_storage_mode = zif_convertapi_client=>c_storage_mode-no_service_storage
         iv_log_handle = m_log_handle
       ).
 
@@ -327,8 +349,8 @@ CLASS lcl_client_test IMPLEMENTATION.
     lo_client = zcl_convertapi_client=>create(
         iv_api_key = m_api_key
         iv_api_secret = m_api_secret
-        io_http_client = mo_http_client
-        iv_service_side_storage = abap_true
+        io_http_client = http_client
+        iv_storage_mode = zif_convertapi_client=>c_storage_mode-use_service_storage
         iv_log_handle = m_log_handle
       ).
 
@@ -348,8 +370,8 @@ CLASS lcl_client_test IMPLEMENTATION.
     lo_client = zcl_convertapi_client=>create(
         iv_api_key = m_api_key
         iv_api_secret = m_api_secret
-        io_http_client = mo_http_client
-        iv_service_side_storage = abap_false
+        io_http_client = http_client
+        iv_storage_mode = zif_convertapi_client=>c_storage_mode-no_service_storage
         iv_log_handle = m_log_handle
       ).
 
@@ -362,12 +384,97 @@ CLASS lcl_client_test IMPLEMENTATION.
 
   ENDMETHOD.
 
+  METHOD multi_input_no_remote_storing.
+
+    DATA lo_client TYPE REF TO zif_convertapi_client.
+
+    lo_client = zcl_convertapi_client=>create(
+        iv_api_key = m_api_key
+        iv_api_secret = m_api_secret
+        io_http_client = http_client
+        iv_storage_mode = zif_convertapi_client=>c_storage_mode-no_service_storage
+        iv_log_handle = m_log_handle
+      ).
+
+    covert_2xgif_to_zip(
+        io_client     = lo_client
+        iv_msg_prefix = `REMOTE:`
+    ).
+
+    lo_client->cleanup(  ).
+
+  ENDMETHOD.
+
+  METHOD multi_input_w_remote_storing.
+
+    DATA lo_client TYPE REF TO zif_convertapi_client.
+
+    lo_client = zcl_convertapi_client=>create(
+        iv_api_key = m_api_key
+        iv_api_secret = m_api_secret
+        io_http_client = http_client
+        iv_storage_mode = zif_convertapi_client=>c_storage_mode-use_service_storage
+        iv_log_handle = m_log_handle
+      ).
+
+    covert_2xgif_to_zip(
+        io_client     = lo_client
+        iv_msg_prefix = `REMOTE:`
+    ).
+
+    lo_client->cleanup(  ).
+
+  ENDMETHOD.
+
+  METHOD multi_output_no_remote_storing.
+
+    DATA lo_client TYPE REF TO zif_convertapi_client.
+
+    lo_client = zcl_convertapi_client=>create(
+        iv_api_key = m_api_key
+        iv_api_secret = m_api_secret
+        io_http_client = http_client
+        iv_storage_mode = zif_convertapi_client=>c_storage_mode-no_service_storage
+        iv_log_handle = m_log_handle
+      ).
+
+    covert_1_to_n(
+        io_client     = lo_client
+        iv_msg_prefix = `REMOTE:`
+    ).
+
+    lo_client->cleanup(  ).
+
+  ENDMETHOD.
+
+  METHOD multi_output_w_remote_storing.
+
+    DATA lo_client TYPE REF TO zif_convertapi_client.
+
+    lo_client = zcl_convertapi_client=>create(
+        iv_api_key = m_api_key
+        iv_api_secret = m_api_secret
+        io_http_client = http_client
+        iv_storage_mode = zif_convertapi_client=>c_storage_mode-use_service_storage
+        iv_log_handle = m_log_handle
+      ).
+
+    covert_1_to_n(
+        io_client     = lo_client
+        iv_msg_prefix = `REMOTE:`
+    ).
+
+    lo_client->cleanup(  ).
+
+  ENDMETHOD.
+
   METHOD covert_1px_gif_to_webp_priv.
 
     DATA lo_input_file    TYPE REF TO zif_convertapi_file.
     DATA lo_result_file   TYPE REF TO zif_convertapi_file.
     DATA lv_result        TYPE xstring.
     DATA lv_result_header TYPE xstring.
+    DATA lo_convertapi_request_error TYPE REF TO zcx_convertapi_exception.
 
     lo_input_file = io_client->create_file(
         iv_name    = 'pixel.gif'
@@ -385,7 +492,7 @@ CLASS lcl_client_test IMPLEMENTATION.
 
     cl_abap_unit_assert=>assert_not_initial(
         act = lv_result
-        msg = iv_msg_prefix && '1px GIF->WEBP: Convertion result empty'
+        msg = iv_msg_prefix && '1px GIF->WEBP: empty result'
     ).
 
     lv_result_header = lv_result+0(4).
@@ -393,28 +500,71 @@ CLASS lcl_client_test IMPLEMENTATION.
     cl_abap_unit_assert=>assert_equals(
         act = lv_result_header
         exp = c_webp_header
-        msg = iv_msg_prefix && '1px GIF->WEBP: Convertion result unrecognized as WEBP'
+        msg = iv_msg_prefix && '1px GIF->WEBP: result unrecognized as WEBP'
+        ).
+
+  ENDMETHOD.
+
+  METHOD covert_2xgif_to_zip.
+
+    DATA lo_conversion TYPE REF TO zif_convertapi_conversion.
+    DATA lt_source     TYPE zif_convertapi_client=>tty_files.
+    DATA lt_result     TYPE zif_convertapi_client=>tty_files.
+
+    APPEND io_client->create_file(
+        iv_name    = 'pixel1.gif'
+        iv_content = c_pixel_gif
+    ) TO lt_source.
+
+    APPEND io_client->create_file(
+        iv_name    = 'pixel2.gif'
+        iv_content = c_pixel_gif
+    ) TO lt_source.
+
+    lo_conversion = io_client->create_conversion(
+        iv_source_format = 'any'
+        iv_target_format = 'zip'
     ).
+
+    lt_result = lo_conversion->convert( i_source = lt_source ).
+
+    cl_abap_unit_assert=>assert_not_initial(
+      EXPORTING
+        act              = lt_result[]
+        msg              = iv_msg_prefix && '2xGIF->ZIP: empty result'
+    ).
+
+    cl_abap_unit_assert=>assert_equals(
+        act = lt_result[ 1 ]->get_content(  )
+        exp = c_zip_header
+        msg = iv_msg_prefix && '2xGIF->ZIP: result unrecognized as ZIP'
+    ).
+
+  ENDMETHOD.
+
+  METHOD covert_1_to_n.
+
 
   ENDMETHOD.
 
   METHOD direct_download.
 
     cl_http_utility=>set_request_uri(
-      request = io_convertapi_client->mo_http_client->request
+      request = io_convertapi_client->http_client->request
       uri     = iv_url ).
 
-    io_convertapi_client->mo_http_client->request->set_version( version = mo_http_client->request->co_protocol_version_1_1 ).
-    io_convertapi_client->mo_http_client->request->set_method( method = zcl_convertapi_client=>c_request_method-get ).
-    io_convertapi_client->add_authorization_credentials( io_convertapi_client->mo_http_client->request ).
+    io_convertapi_client->http_client->request->set_version( version = http_client->request->co_protocol_version_1_1 ).
+    io_convertapi_client->http_client->request->set_method( method = zcl_convertapi_client=>c_request_method-get ).
+    io_convertapi_client->add_authorization_credentials( io_convertapi_client->http_client->request ).
 
-    io_convertapi_client->mo_http_client->send( EXCEPTIONS OTHERS = 4 ).
+    io_convertapi_client->http_client->send( EXCEPTIONS OTHERS = 4 ).
     CHECK sy-subrc = 0.
 
-    io_convertapi_client->mo_http_client->receive( EXCEPTIONS OTHERS = 4 ).
+    io_convertapi_client->http_client->receive( EXCEPTIONS OTHERS = 4 ).
     CHECK sy-subrc = 0.
 
-    io_convertapi_client->mo_http_client->response->get_status( IMPORTING code = rv_status_code ).
+    io_convertapi_client->http_client->response->get_status( IMPORTING code = rv_status_code ).
   ENDMETHOD.
 
-ENDCLASS.                    "lcl_client_test IMPLEMENTATION
+
+ENDCLASS.                    "ltc_client_test IMPLEMENTATION

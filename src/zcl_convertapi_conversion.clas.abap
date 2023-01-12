@@ -17,46 +17,46 @@ CLASS zcl_convertapi_conversion DEFINITION
 
     TYPES tty_parameters TYPE STANDARD TABLE OF sty_parameter WITH KEY name.
 
-    DATA result_format TYPE string READ-ONLY .
-    DATA parameters TYPE tty_parameters READ-ONLY .
-
   PROTECTED SECTION.
 
   PRIVATE SECTION.
+
+    DATA client TYPE REF TO zcl_convertapi_client.
+    DATA result_format TYPE string.
+    DATA source_format TYPE string.
+    DATA parameters TYPE tty_parameters.
 
     CLASS-METHODS factory
       IMPORTING
         !i_conversion        TYPE any
         !io_client           TYPE REF TO zcl_convertapi_client
+        !iv_source_format    TYPE string OPTIONAL
         !it_parameters       TYPE tty_parameters OPTIONAL
       RETURNING
-        VALUE(ro_conversion) TYPE REF TO zif_convertapi_conversion.
+        VALUE(ro_conversion) TYPE REF TO zif_convertapi_conversion
+      RAISING
+        zcx_convertapi_exception.
 
     METHODS constructor
       IMPORTING
-        !io_client        TYPE REF TO zcl_convertapi_client
-        !im_result_format TYPE string
-        !it_parameters    TYPE tty_parameters OPTIONAL .
+        !im_result_format TYPE string.
 
 ENDCLASS.
 
-
-
 CLASS zcl_convertapi_conversion IMPLEMENTATION.
-
 
   METHOD constructor.
 
     result_format = im_result_format.
-    APPEND LINES OF it_parameters TO parameters.
 
   ENDMETHOD.
 
   METHOD factory.
 
-    DATA: lo_typedescr  TYPE REF TO cl_abap_typedescr.
-    DATA: lo_classdescr TYPE REF TO cl_abap_classdescr.
-    DATA: lv_result_format TYPE string.
+    DATA lo_typedescr  TYPE REF TO cl_abap_typedescr.
+    DATA lo_classdescr TYPE REF TO cl_abap_classdescr.
+    DATA lv_result_format TYPE string.
+    DATA lo_conversion TYPE REF TO zcl_convertapi_conversion.
 
     lo_typedescr = cl_abap_typedescr=>describe_by_data( i_conversion  ).
 
@@ -65,16 +65,30 @@ CLASS zcl_convertapi_conversion IMPLEMENTATION.
         ro_conversion = i_conversion.
       WHEN cl_abap_typedescr=>typekind_csequence OR cl_abap_typedescr=>typekind_clike OR cl_abap_typedescr=>typekind_string.
         lv_result_format = i_conversion.
-        ro_conversion = NEW zcl_convertapi_conversion(
-            io_client        = io_client
+        lo_conversion = NEW zcl_convertapi_conversion(
             im_result_format = lv_result_format
-            it_parameters    = it_parameters
+
         ).
+        APPEND LINES OF it_parameters TO lo_conversion->parameters.
+        lo_conversion->client        = io_client.
+        lo_conversion->source_format = iv_source_format.
+
+        ro_conversion = lo_conversion.
+      WHEN OTHERS.
+        zcx_convertapi_exception=>raise( message = 'Could not create conversion from data type provided' ).
     ENDCASE.
 
   ENDMETHOD.
 
   METHOD zif_convertapi_conversion~convert.
+
+    me->client->convert(
+      EXPORTING
+        i_source       = i_source
+        io_parameters  = me
+      IMPORTING
+        et_target_files = rt_files
+    ).
 
   ENDMETHOD.
 
@@ -97,6 +111,20 @@ CLASS zcl_convertapi_conversion IMPLEMENTATION.
 
   METHOD zif_convertapi_conversion~get_result_format.
     rv_result_format = result_format.
+  ENDMETHOD.
+
+  METHOD zif_convertapi_conversion~get_source_format.
+    DATA lo_file LIKE LINE OF it_files.
+
+    IF me->source_format IS NOT INITIAL.
+        rv_source_format = me->source_format.
+    ELSEIF it_files[] IS NOT INITIAL.
+      READ TABLE it_files[] INDEX 1 INTO lo_file.
+      rv_source_format = lo_file->get_ext(  ).
+    ELSE.
+      zcx_convertapi_exception=>raise( 'Unable to determine source format for conversion' ).
+    ENDIF.
+
   ENDMETHOD.
 
   METHOD zif_convertapi_conversion~set_parameter.

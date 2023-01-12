@@ -13,12 +13,11 @@ CLASS zcl_convertapi_file DEFINITION
 
   PRIVATE SECTION.
 
-    DATA mo_client                 TYPE REF TO zcl_convertapi_client.
-    DATA mv_has_client_side_copy   TYPE abap_bool.
-    DATA mv_has_service_side_copy  TYPE abap_bool.
-    DATA mv_content_bin            TYPE xstring.
+    DATA client                 TYPE REF TO zcl_convertapi_client.
+    DATA has_service_side_copy  TYPE abap_bool.
+    DATA content_bin            TYPE xstring.
 
-    DATA id              TYPE string.
+    DATA convertapi_id              TYPE string.
     DATA name            TYPE string.
     DATA ext             TYPE string.
     DATA url             TYPE string.
@@ -28,18 +27,16 @@ CLASS zcl_convertapi_file DEFINITION
     CLASS-METHODS factory
       IMPORTING
         !client         TYPE REF TO zcl_convertapi_client
-        !id             TYPE string OPTIONAL
         !name           TYPE string OPTIONAL
         !ext            TYPE string OPTIONAL
         !size           TYPE integer DEFAULT -1
         !url            TYPE string OPTIONAL
+        !convertapi_id  TYPE string OPTIONAL
         !convertapi_url TYPE string OPTIONAL
         !content        TYPE xstring OPTIONAL
         !content_base64 TYPE string OPTIONAL
       RETURNING
         VALUE(ro_file)  TYPE REF TO zif_convertapi_file.
-
-    METHODS recalc_state.
 
 ENDCLASS.
 
@@ -49,23 +46,23 @@ CLASS zcl_convertapi_file IMPLEMENTATION.
   METHOD factory.
     DATA: lo_file TYPE REF TO zcl_convertapi_file.
 
-    IF id IS INITIAL AND name IS INITIAL AND ext IS INITIAL.
+    IF convertapi_id IS INITIAL AND name IS INITIAL AND ext IS INITIAL.
 
     ENDIF.
 
     lo_file =  NEW zcl_convertapi_file( ).
 
-    lo_file->mo_client                = client.
+    lo_file->client                = client.
 
     IF content IS NOT INITIAL.
-      lo_file->mv_content_bin           = content.
+      lo_file->content_bin           = content.
     ELSEIF content_base64 IS NOT INITIAL.
 
       CALL FUNCTION 'SCMS_BASE64_DECODE_STR'
         EXPORTING
           input  = content_base64
         IMPORTING
-          output = lo_file->mv_content_bin
+          output = lo_file->content_bin
         EXCEPTIONS
           failed = 1
           OTHERS = 2.
@@ -76,11 +73,11 @@ CLASS zcl_convertapi_file IMPLEMENTATION.
 
     ENDIF.
 
-    lo_file->id   = id.
+    lo_file->convertapi_id   = convertapi_id.
     lo_file->name = name.
     lo_file->ext  = ext.
     lo_file->url  = url.
-    lo_file->size = xstrlen( lo_file->mv_content_bin ) .
+    lo_file->size = xstrlen( lo_file->content_bin ) .
     lo_file->convertapi_url  = convertapi_url.
 
     ro_file = lo_file.
@@ -88,36 +85,24 @@ CLASS zcl_convertapi_file IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD zif_convertapi_file~delete_service_side_copy.
-    mo_client->delete( io_file = me ).
+    client->delete( io_file = me ).
+    ro_same_file = me.
   ENDMETHOD.
 
   METHOD zif_convertapi_file~get_content.
 
-    IF mv_content_bin IS INITIAL AND id IS NOT INITIAL.
+    IF content_bin IS INITIAL AND convertapi_id IS NOT INITIAL.
 
-      me->mo_client->download(
+      me->client->download(
         EXPORTING
           io_file         = me
         IMPORTING
-          ev_file_content = mv_content_bin
+          ev_file_content = content_bin
       ).
 
     ENDIF.
-    rv_content = mv_content_bin.
+    rv_content = content_bin.
 
-  ENDMETHOD.
-
-  METHOD recalc_state.
-    IF me->id IS INITIAL.
-      mv_has_service_side_copy = abap_false.
-    ELSE.
-      mv_has_service_side_copy = abap_true.
-    ENDIF.
-    IF me->mv_content_bin IS INITIAL.
-      mv_has_client_side_copy = abap_false.
-    ELSE.
-      mv_has_client_side_copy = abap_true.
-    ENDIF.
   ENDMETHOD.
 
   METHOD zif_convertapi_file~get_ext.
@@ -133,7 +118,7 @@ CLASS zcl_convertapi_file IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD zif_convertapi_file~get_id.
-    rv_id = me->id.
+    rv_id = me->convertapi_id.
   ENDMETHOD.
 
   METHOD zif_convertapi_file~get_name.
@@ -153,32 +138,40 @@ CLASS zcl_convertapi_file IMPLEMENTATION.
     DATA: lo_conversion TYPE REF TO zif_convertapi_conversion.
     DATA: lt_result_files TYPE zif_convertapi_client=>tty_files.
 
-    lo_conversion = mo_client->zif_convertapi_client~create_conversion(
+    lo_conversion = client->zif_convertapi_client~create_conversion(
             iv_target_format = i_conversion
         ).
 
-    mo_client->convert(
+    client->convert(
       EXPORTING
-        im_source       =  me
-        im_parameters   =  lo_conversion
+        i_source       =  me
+        io_parameters   =  lo_conversion
       IMPORTING
         et_target_files = lt_result_files
     ).
 
-    IF lt_result_files[] IS NOT INITIAL.
-      ro_file = lt_result_files[ 1 ].
-    ELSE.
-      "TODO raise exception
-    ENDIF.
+    CASE lines( lt_result_files[] ).
+    WHEN 0.
+        zcx_convertapi_exception=>raise( 'Conversion did not return any files' ).
+    WHEN 1.
+      ro_new_file = lt_result_files[ 1 ].
+    WHEN OTHERS.
+      zcx_convertapi_exception=>raise( 'Conversion returned more than one file' ).
+    ENDCASE.
 
   ENDMETHOD.
 
   METHOD zif_convertapi_file~has_service_side_copy.
-    rv_result = mv_has_service_side_copy.
+    IF me->convertapi_id IS INITIAL.
+      rv_result = abap_false.
+    ELSE.
+      rv_result = abap_true.
+    ENDIF.
   ENDMETHOD.
 
   METHOD zif_convertapi_file~upload.
-    mo_client->upload( io_file = me ).
+    client->upload( io_file = me ).
+    ro_same_file = me.
   ENDMETHOD.
 
   METHOD zif_convertapi_file~get_size.

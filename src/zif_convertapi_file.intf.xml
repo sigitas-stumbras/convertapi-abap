@@ -14,7 +14,12 @@
     <SEOCOMPOTX>
      <CMPNAME>CONVERT_TO</CMPNAME>
      <LANGU>E</LANGU>
-     <DESCRIPT>Conversion</DESCRIPT>
+     <DESCRIPT>Convert file</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CMPNAME>DELETE_SERVICE_SIDE_COPY</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Delete a service-side copy of the file</DESCRIPT>
     </SEOCOMPOTX>
     <SEOCOMPOTX>
      <CMPNAME>GET_CONTENT</CMPNAME>
@@ -22,14 +27,34 @@
      <DESCRIPT>Get file content as binary (xstring)</DESCRIPT>
     </SEOCOMPOTX>
     <SEOCOMPOTX>
+     <CMPNAME>GET_CONVERTAPI_URL</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Get ConvertAPI URL of a service-side copy of the file</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
      <CMPNAME>GET_EXT</CMPNAME>
      <LANGU>E</LANGU>
      <DESCRIPT>Get file extention</DESCRIPT>
     </SEOCOMPOTX>
     <SEOCOMPOTX>
+     <CMPNAME>GET_EXTERNAL_URL</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Get ext. URL where the file can be read by ConvertAPI servic</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CMPNAME>GET_ID</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Get ConvertAPI ID of a service-side copy of the file</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
      <CMPNAME>GET_NAME</CMPNAME>
      <LANGU>E</LANGU>
      <DESCRIPT>Get file name (incl. extention)</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CMPNAME>GET_SIZE</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Get file size</DESCRIPT>
     </SEOCOMPOTX>
     <SEOCOMPOTX>
      <CMPNAME>HAS_SERVICE_SIDE_COPY</CMPNAME>
