@@ -63,7 +63,11 @@ CLASS zcl_convertapi_conversion IMPLEMENTATION.
     CASE lo_typedescr->type_kind.
       WHEN cl_abap_typedescr=>typekind_oref.
         ro_conversion = i_conversion.
-      WHEN cl_abap_typedescr=>typekind_csequence OR cl_abap_typedescr=>typekind_clike OR cl_abap_typedescr=>typekind_string.
+      WHEN cl_abap_typedescr=>typekind_csequence
+        OR cl_abap_typedescr=>typekind_clike
+        OR cl_abap_typedescr=>typekind_string
+        OR cl_abap_typedescr=>typekind_char.
+
         lv_result_format = i_conversion.
         lo_conversion = NEW zcl_convertapi_conversion(
             im_result_format = lv_result_format

@@ -10,11 +10,10 @@ CLASS ltc_client_test DEFINITION FOR TESTING
     METHODS: upload_download_delete         FOR TESTING RAISING zcx_convertapi_exception.
     METHODS: covert_w_remote_storing        FOR TESTING RAISING zcx_convertapi_exception.
     METHODS: covert_no_remote_storing       FOR TESTING RAISING zcx_convertapi_exception.
-    METHODS: multi_input_w_remote_storing   FOR TESTING RAISING zcx_convertapi_exception.
-    METHODS: multi_input_no_remote_storing  FOR TESTING RAISING zcx_convertapi_exception.
-    METHODS: multi_output_w_remote_storing  FOR TESTING RAISING zcx_convertapi_exception.
-    METHODS: multi_output_no_remote_storing FOR TESTING RAISING zcx_convertapi_exception.
-
+    METHODS: covert_manual                  FOR TESTING RAISING zcx_convertapi_exception.
+    METHODS: n_to_1_to_n_w_remote_storing   FOR TESTING RAISING zcx_convertapi_exception.
+    METHODS: n_to_1_to_n_no_remote_storing  FOR TESTING RAISING zcx_convertapi_exception.
+    METHODS: n_to_1_to_n_manual             FOR TESTING RAISING zcx_convertapi_exception.
 
   PRIVATE SECTION.
     CLASS-DATA: m_api_key      TYPE string.
@@ -47,14 +46,7 @@ CLASS ltc_client_test DEFINITION FOR TESTING
       RAISING
         zcx_convertapi_exception.
 
-    METHODS: covert_1_to_n
-      IMPORTING
-        io_client     TYPE REF TO zif_convertapi_client
-        iv_msg_prefix TYPE string
-      RAISING
-        zcx_convertapi_exception.
-
-    METHODS: covert_2xgif_to_zip
+    METHODS: covert_2xgif_to_and_from_zip
       IMPORTING
         io_client     TYPE REF TO zif_convertapi_client
         iv_msg_prefix TYPE string
@@ -384,7 +376,28 @@ CLASS ltc_client_test IMPLEMENTATION.
 
   ENDMETHOD.
 
-  METHOD multi_input_no_remote_storing.
+  METHOD covert_manual.
+
+    DATA lo_client TYPE REF TO zif_convertapi_client.
+
+    lo_client = zcl_convertapi_client=>create(
+        iv_api_key = m_api_key
+        iv_api_secret = m_api_secret
+        io_http_client = http_client
+        iv_storage_mode = zif_convertapi_client=>c_storage_mode-manual
+        iv_log_handle = m_log_handle
+      ).
+
+    covert_1px_gif_to_webp_priv(
+        io_client     = lo_client
+        iv_msg_prefix = `LOCAL:`
+    ).
+
+    lo_client->cleanup(  ).
+
+  ENDMETHOD.
+
+  METHOD n_to_1_to_n_no_remote_storing.
 
     DATA lo_client TYPE REF TO zif_convertapi_client.
 
@@ -396,7 +409,7 @@ CLASS ltc_client_test IMPLEMENTATION.
         iv_log_handle = m_log_handle
       ).
 
-    covert_2xgif_to_zip(
+    covert_2xgif_to_and_from_zip(
         io_client     = lo_client
         iv_msg_prefix = `REMOTE:`
     ).
@@ -405,7 +418,7 @@ CLASS ltc_client_test IMPLEMENTATION.
 
   ENDMETHOD.
 
-  METHOD multi_input_w_remote_storing.
+  METHOD n_to_1_to_n_w_remote_storing.
 
     DATA lo_client TYPE REF TO zif_convertapi_client.
 
@@ -417,7 +430,7 @@ CLASS ltc_client_test IMPLEMENTATION.
         iv_log_handle = m_log_handle
       ).
 
-    covert_2xgif_to_zip(
+    covert_2xgif_to_and_from_zip(
         io_client     = lo_client
         iv_msg_prefix = `REMOTE:`
     ).
@@ -426,7 +439,7 @@ CLASS ltc_client_test IMPLEMENTATION.
 
   ENDMETHOD.
 
-  METHOD multi_output_no_remote_storing.
+  METHOD n_to_1_to_n_manual.
 
     DATA lo_client TYPE REF TO zif_convertapi_client.
 
@@ -434,32 +447,11 @@ CLASS ltc_client_test IMPLEMENTATION.
         iv_api_key = m_api_key
         iv_api_secret = m_api_secret
         io_http_client = http_client
-        iv_storage_mode = zif_convertapi_client=>c_storage_mode-no_service_storage
+        iv_storage_mode = zif_convertapi_client=>c_storage_mode-manual
         iv_log_handle = m_log_handle
       ).
 
-    covert_1_to_n(
-        io_client     = lo_client
-        iv_msg_prefix = `REMOTE:`
-    ).
-
-    lo_client->cleanup(  ).
-
-  ENDMETHOD.
-
-  METHOD multi_output_w_remote_storing.
-
-    DATA lo_client TYPE REF TO zif_convertapi_client.
-
-    lo_client = zcl_convertapi_client=>create(
-        iv_api_key = m_api_key
-        iv_api_secret = m_api_secret
-        io_http_client = http_client
-        iv_storage_mode = zif_convertapi_client=>c_storage_mode-use_service_storage
-        iv_log_handle = m_log_handle
-      ).
-
-    covert_1_to_n(
+    covert_2xgif_to_and_from_zip(
         io_client     = lo_client
         iv_msg_prefix = `REMOTE:`
     ).
@@ -505,11 +497,16 @@ CLASS ltc_client_test IMPLEMENTATION.
 
   ENDMETHOD.
 
-  METHOD covert_2xgif_to_zip.
+  METHOD covert_2xgif_to_and_from_zip.
 
-    DATA lo_conversion TYPE REF TO zif_convertapi_conversion.
-    DATA lt_source     TYPE zif_convertapi_client=>tty_files.
-    DATA lt_result     TYPE zif_convertapi_client=>tty_files.
+    DATA lo_zip   TYPE REF TO zif_convertapi_conversion.
+    DATA lo_unzip TYPE REF TO zif_convertapi_conversion.
+    DATA lt_source       TYPE zif_convertapi_client=>tty_files.
+    DATA lt_result       TYPE zif_convertapi_client=>tty_files.
+    DATA lv_result        TYPE xstring.
+    DATA lv_result_header TYPE xstring.
+    DATA lo_zip_file          TYPE REF TO zif_convertapi_file.
+    DATA lt_unziped_files TYPE zif_convertapi_client=>tty_files.
 
     APPEND io_client->create_file(
         iv_name    = 'pixel1.gif'
@@ -521,12 +518,12 @@ CLASS ltc_client_test IMPLEMENTATION.
         iv_content = c_pixel_gif
     ) TO lt_source.
 
-    lo_conversion = io_client->create_conversion(
+    lo_zip = io_client->create_conversion(
         iv_source_format = 'any'
         iv_target_format = 'zip'
     ).
 
-    lt_result = lo_conversion->convert( i_source = lt_source ).
+    lt_result = lo_zip->convert( i_source = lt_source ).
 
     cl_abap_unit_assert=>assert_not_initial(
       EXPORTING
@@ -534,16 +531,39 @@ CLASS ltc_client_test IMPLEMENTATION.
         msg              = iv_msg_prefix && '2xGIF->ZIP: empty result'
     ).
 
+    lo_zip_file = lt_result[ 1 ].
+    lv_result = lo_zip_file->get_content( ).
+    lv_result_header = lv_result+0(4).
+
     cl_abap_unit_assert=>assert_equals(
-        act = lt_result[ 1 ]->get_content(  )
+        act = lv_result_header
         exp = c_zip_header
         msg = iv_msg_prefix && '2xGIF->ZIP: result unrecognized as ZIP'
     ).
 
-  ENDMETHOD.
+    lo_unzip = io_client->create_conversion(
+        iv_source_format = 'zip'
+        iv_target_format = 'extract'
+    ).
 
-  METHOD covert_1_to_n.
+    lt_unziped_files = lo_unzip->convert( lo_zip_file ).
 
+    cl_abap_unit_assert=>assert_not_initial(
+        act              = lt_unziped_files[]
+        msg              = iv_msg_prefix && 'ZIP->2xGIF: empty result'
+    ).
+
+    cl_abap_unit_assert=>assert_equals(
+        act = lines( lt_unziped_files[] )
+        exp = 2
+        msg = iv_msg_prefix && 'ZIP->2xGIF: did not receive two files'
+    ).
+
+    cl_abap_unit_assert=>assert_equals(
+        act = lt_unziped_files[ 1 ]->get_content(  )
+        exp = c_pixel_gif
+        msg = iv_msg_prefix && '2xGIF->ZIP: unziped content not the same as starting one'
+    ).
 
   ENDMETHOD.
 

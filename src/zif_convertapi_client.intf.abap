@@ -55,7 +55,7 @@ interface ZIF_CONVERTAPI_CLIENT
       ZCX_CONVERTAPI_EXCEPTION .
   methods CREATE_CONVERSION
     importing
-      !IV_TARGET_FORMAT type STRING
+      !IV_TARGET_FORMAT type ANY
       !IV_SOURCE_FORMAT type STRING optional
       !IT_PARAMETERS type ZIF_CONVERTAPI_CLIENT=>TTY_PARAMETERS optional
     returning

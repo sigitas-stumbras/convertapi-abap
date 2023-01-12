@@ -158,7 +158,9 @@ CLASS zcl_convertapi_client DEFINITION
         it_files       TYPE zif_convertapi_client=>tty_files
         io_conversion  TYPE REF TO zif_convertapi_conversion
       RETURNING
-        VALUE(rv_json) TYPE string.
+        VALUE(rv_json) TYPE string
+      RAISING
+        zcx_convertapi_exception.
 
     METHODS get_convert_request_url
       IMPORTING
@@ -179,17 +181,15 @@ CLASS zcl_convertapi_client DEFINITION
       IMPORTING
         io_file              TYPE REF TO zif_convertapi_file
       RETURNING
-        VALUE(rs_file_value) TYPE zcl_convertapi_client=>sty_convert_request_filevalue.
+        VALUE(rs_file_value) TYPE zcl_convertapi_client=>sty_convert_request_filevalue
+      RAISING
+        zcx_convertapi_exception.
 
     METHODS send_request
       RETURNING
         VALUE(rv_response_code) TYPE integer
       RAISING
         zcx_convertapi_exception.
-
-    METHODS trace_log
-      IMPORTING
-        msg TYPE string.
 
 ENDCLASS.
 
@@ -236,10 +236,6 @@ CLASS zcl_convertapi_client IMPLEMENTATION.
         content = iv_content
     ).
 
-    IF me->storage_mode = abap_true.
-      ro_file->upload(  ).
-    ENDIF.
-
   ENDMETHOD.
 
   METHOD zif_convertapi_client~create_file_from_fs.
@@ -250,24 +246,20 @@ CLASS zcl_convertapi_client IMPLEMENTATION.
     lv_filename = iv_filename.
 
     IF iv_filename IS INITIAL.
-      lv_filename = lcl_fs=>get_filename( iv_path ).
+      lv_filename = lcl_fs=>get_filename( iv_physical_file ).
     ENDIF.
 
     IF iv_filename IS INITIAL.
       zcx_convertapi_exception=>raise( 'Could not determine the file name' ).
     ENDIF.
 
-    lv_content  = lcl_fs=>read_file( iv_path ).
+    lv_content  = lcl_fs=>read_physical_file( iv_physical_file ).
 
     ro_file = zcl_convertapi_file=>factory(
         client  = me
         name    = lv_filename
         content = lv_content
     ).
-
-    IF me->storage_mode = abap_true.
-      ro_file->upload(  ).
-    ENDIF.
 
   ENDMETHOD.
 
@@ -278,10 +270,6 @@ CLASS zcl_convertapi_client IMPLEMENTATION.
         name   = iv_name
         url    = iv_url
     ).
-
-    IF me->storage_mode = abap_true.
-      ro_file->upload(  ).
-    ENDIF.
 
   ENDMETHOD.
 
@@ -304,8 +292,6 @@ CLASS zcl_convertapi_client IMPLEMENTATION.
 
   METHOD convert.
 
-    me->trace_log( `Conversion start` )  ##NO_TEXT.
-
     DATA lt_source_files   TYPE zif_convertapi_client=>tty_files.
     DATA lo_file           TYPE REF TO zif_convertapi_file.
     DATA lo_conversion     TYPE REF TO zif_convertapi_conversion.
@@ -326,7 +312,6 @@ CLASS zcl_convertapi_client IMPLEMENTATION.
         ).
 
     IF storage_mode = zif_convertapi_client=>c_storage_mode-use_service_storage.
-
       LOOP AT lt_source_files ASSIGNING <source_file>.
         IF <source_file>->has_service_side_copy( ) = abap_false.
           <source_file>->upload(  ).
@@ -364,18 +349,16 @@ CLASS zcl_convertapi_client IMPLEMENTATION.
 
     http_client->request->set_version( version = http_client->request->co_protocol_version_1_1 ).
     http_client->request->set_method( method = c_request_method-post ).
+    http_client->request->set_cdata( data = lv_request_body ).
 
     http_client->request->set_header_field(
         name = c_http_header-content_type
         value = c_content_type-application_json
     ).
 
-    http_client->request->set_cdata( data = lv_request_body ).
-
     add_authorization_credentials( http_client->request ).
 
     lv_http_response_code = me->send_request(  ).
-
     lv_response_body = http_client->response->get_cdata( ).
 
     IF lv_http_response_code = 200.
@@ -402,7 +385,9 @@ CLASS zcl_convertapi_client IMPLEMENTATION.
         IF auto_cleanup = abap_true.
           LOOP AT et_target_files INTO lo_file.
             lo_file->get_content( ).
-            lo_file->delete_service_side_copy( ).
+            IF lo_file->has_service_side_copy( ) = abap_true.
+              lo_file->delete_service_side_copy( ).
+            ENDIF.
           ENDLOOP.
         ENDIF.
 
@@ -410,10 +395,10 @@ CLASS zcl_convertapi_client IMPLEMENTATION.
 
     ELSE.
 
-      RAISE EXCEPTION TYPE zcx_convertapi_exception
-        EXPORTING
-          http_code = lv_http_response_code
-          response  = lv_response_body.
+      zcx_convertapi_exception=>raise_response(
+          http_code                = lv_http_response_code
+          response                 = lv_response_body
+      ).
 
     ENDIF.
 
@@ -423,8 +408,6 @@ CLASS zcl_convertapi_client IMPLEMENTATION.
 
     DATA lv_response_body TYPE string.
     DATA lv_http_response_code TYPE integer.
-
-    me->trace_log( `Deleting service copy of ` && io_file->name && `(` && io_file->convertapi_id && `)`)  ##NO_TEXT.
 
     cl_http_utility=>set_request_uri(
       request = http_client->request
@@ -447,10 +430,11 @@ CLASS zcl_convertapi_client IMPLEMENTATION.
     ELSE.
       lv_response_body = http_client->response->get_cdata( ).
 
-      RAISE EXCEPTION TYPE zcx_convertapi_exception
-        EXPORTING
-          http_code = lv_http_response_code
-          response  = lv_response_body.
+      zcx_convertapi_exception=>raise_response(
+          http_code                = lv_http_response_code
+          response                 = lv_response_body
+      ).
+
     ENDIF.
 
 
@@ -460,8 +444,6 @@ CLASS zcl_convertapi_client IMPLEMENTATION.
 
     DATA lv_response_body TYPE string.
     DATA lv_http_response_code TYPE integer.
-
-    me->trace_log( `Downloading ` && io_file->name && `(` && io_file->convertapi_id && `)`)  ##NO_TEXT.
 
     cl_http_utility=>set_request_uri(
       request = http_client->request
@@ -482,10 +464,10 @@ CLASS zcl_convertapi_client IMPLEMENTATION.
 
       lv_response_body = http_client->response->get_cdata( ).
 
-      RAISE EXCEPTION TYPE zcx_convertapi_exception
-        EXPORTING
-          http_code = lv_http_response_code
-          response  = lv_response_body.
+      zcx_convertapi_exception=>raise_response(
+          http_code                = lv_http_response_code
+          response                 = lv_response_body
+      ).
 
     ENDIF.
 
@@ -522,8 +504,7 @@ CLASS zcl_convertapi_client IMPLEMENTATION.
         lv_file_name = io_file->name.
       ELSE.
 
-        " TODO - attempt to extract filename from url
-        lv_file_name = io_file->url.
+        lv_file_name = lcl_fs=>get_filename_from_url( io_file->url ).
 
         IF lv_file_name IS INITIAL AND io_file->ext IS NOT INITIAL.
           lv_file_name = 'file.' && io_file->ext.
@@ -538,27 +519,23 @@ CLASS zcl_convertapi_client IMPLEMENTATION.
 
     ELSE.
 
-      " TODO: filename validation - exception or fix&go?
-
-      lv_file_name = io_file->name.
-      REPLACE ALL OCCURRENCES OF REGEX '[\x00-\x31\\/:"*?<>|]+' IN lv_file_name WITH 'X'. " striping filename invalid characters
-
-      lv_file_name_safe = lv_file_name.
+      lv_file_name_safe = io_file->name.
       REPLACE ALL OCCURRENCES OF REGEX '[^\x32-\x7F]+' IN lv_file_name_safe WITH 'X'  ##NO_TEXT. " replacing non-ascii characters with X
 
       IF lv_file_name_safe <> io_file->name.
         lv_content_disposition_add = ` ;filename*=UTF-8''` && cl_http_utility=>if_http_utility~escape_url( io_file->name )  ##NO_TEXT.
       ENDIF.
 
-      http_client->request->set_data( data = io_file->content_bin ).
-      add_authorization_credentials( http_client->request ).
-
       http_client->request->set_header_field(
           name  = c_http_header-content_disposition
-          value = 'inline; filename="' && io_file->name && '"' && lv_content_disposition_add   ##NO_TEXT
+          value = 'inline; filename="' && lv_file_name_safe && '"' && lv_content_disposition_add   ##NO_TEXT
       ).
 
+      http_client->request->set_data( data = io_file->content_bin ).
+
     ENDIF.
+
+    add_authorization_credentials( http_client->request ).
 
     lv_http_response_code = me->send_request(  ).
 
@@ -582,10 +559,12 @@ CLASS zcl_convertapi_client IMPLEMENTATION.
       APPEND io_file TO uploaded_files[].
 
     ELSE.
-      RAISE EXCEPTION TYPE zcx_convertapi_exception
-        EXPORTING
-          http_code = lv_http_response_code
-          response  = lv_response_body.
+
+      zcx_convertapi_exception=>raise_response(
+          http_code                = lv_http_response_code
+          response                 = lv_response_body
+      ).
+
     ENDIF.
 
   ENDMETHOD.
@@ -667,7 +646,6 @@ CLASS zcl_convertapi_client IMPLEMENTATION.
     ELSEIF lines( it_files[] ) > 1.
       APPEND INITIAL LINE TO ls_body-parameters ASSIGNING <body_param>.
       <body_param>-name = zif_convertapi_client=>c_param-files.
-      me->trace_log(`Files:`) ##NO_TEXT.
       LOOP AT it_files[] ASSIGNING <file>.
         APPEND INITIAL LINE TO <body_param>-file_values ASSIGNING <file_value>.
         <file_value> = get_filevalue( <file> ).
@@ -675,9 +653,7 @@ CLASS zcl_convertapi_client IMPLEMENTATION.
     ENDIF.
 
     lt_parameters = io_conversion->get_parameters(  ).
-    me->trace_log(`Param:`) ##NO_TEXT.
     LOOP AT lt_parameters[] ASSIGNING <conv_param>.
-      me->trace_log( `   ` && <conv_param>-name && `: ` && <conv_param>-value ).
       APPEND INITIAL LINE TO ls_body-parameters ASSIGNING <body_param>.
       <body_param>-name  = <conv_param>-name.
       <body_param>-value = <conv_param>-value.
@@ -712,31 +688,6 @@ CLASS zcl_convertapi_client IMPLEMENTATION.
 
   ENDMETHOD.
 
-  METHOD trace_log.
-    DATA lv_msg TYPE c.
-
-    IF log_handle IS NOT INITIAL.
-      lv_msg = msg.
-
-      CALL FUNCTION 'BAL_LOG_MSG_ADD_FREE_TEXT'
-        EXPORTING
-          i_log_handle     = log_handle    " Log handle
-          i_msgty          = 'I'    " Message type (A, E, W, I, S)
-          i_probclass      = '4'    " Problem class (1, 2, 3, 4)
-          i_text           = lv_msg    " Message data
-        EXCEPTIONS
-          log_not_found    = 1
-          msg_inconsistent = 2
-          log_is_full      = 3
-          OTHERS           = 4.
-      IF sy-subrc <> 0.
-        MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
-      ENDIF.
-
-    ENDIF.
-  ENDMETHOD.
-
-
   METHOD get_filevalue.
     DATA lo_file TYPE REF TO zcl_convertapi_file.
     lo_file ?= io_file.
@@ -754,7 +705,7 @@ CLASS zcl_convertapi_client IMPLEMENTATION.
           output = rs_file_value-data.
 
     ELSE.
-      " TODO raise exception
+      zcx_convertapi_exception=>raise( 'Invalid file object' ).
     ENDIF.
   ENDMETHOD.
 

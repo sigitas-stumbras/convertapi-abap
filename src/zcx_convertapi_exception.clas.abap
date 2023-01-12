@@ -1,48 +1,49 @@
-class ZCX_CONVERTAPI_EXCEPTION definition
-  public
-  inheriting from CX_STATIC_CHECK
-  final
-  create public .
+CLASS zcx_convertapi_exception DEFINITION
+  PUBLIC
+  INHERITING FROM cx_static_check
+  FINAL
+  CREATE PUBLIC .
 
-public section.
+  PUBLIC SECTION.
 
-  INTERFACES if_t100_dyn_msg .
-  INTERFACES if_t100_message .
+    INTERFACES if_t100_dyn_msg .
+    INTERFACES if_t100_message .
 
-  constants REQUEST_ERROR type SOTR_CONC value '0800276976981EEDA185C80EE9C60CFB' ##NO_TEXT.
-  constants CLASSIC_EXCEPTION type SOTR_CONC value '0800276976981EEDA1A41539A86FCCFB' ##NO_TEXT.
-  data HTTP_CODE type INTEGER .
-  data CODE type INTEGER .
-  data RESPONSE type STRING.
-  data MESSAGE type STRING.
-  data METHOD type STRING.
-  data EXCEPTION type STRING.
+    CONSTANTS request_error TYPE sotr_conc VALUE '0800276976981EEDA185C80EE9C60CFB' ##NO_TEXT.
+    CONSTANTS classic_exception TYPE sotr_conc VALUE '0800276976981EEDA1A41539A86FCCFB' ##NO_TEXT.
+    DATA http_code TYPE integer .
+    DATA code TYPE string .
+    DATA response TYPE string.
+    DATA message TYPE string.
+    DATA method TYPE string.
+    DATA exception TYPE string.
 
-  methods CONSTRUCTOR
-    importing
-      !textid   LIKE if_t100_message=>t100key OPTIONAL
-      !PREVIOUS like PREVIOUS optional
-      !HTTP_CODE type INTEGER optional
-      !CODE type INTEGER optional
-      !RESPONSE type STRING optional .
-  class-methods RAISE
-    importing
-      !MESSAGE   type STRING
-    raising
-      ZCX_CONVERTAPI_EXCEPTION .
-  class-methods RAISE_CLASSIC
-    importing
-      !METHOD    type STRING
-      !EXCEPTION type STRING
-      !MESSAGE   type STRING
-    raising
-      ZCX_CONVERTAPI_EXCEPTION .
-  class-methods RAISE_RESPONSE
-    importing
-      !HTTP_CODE type INTEGER
-      !RESPONSE type STRING optional
-    raising
-      ZCX_CONVERTAPI_EXCEPTION .
+    METHODS constructor
+      IMPORTING
+        !textid    LIKE if_t100_message=>t100key OPTIONAL
+        !previous  LIKE previous OPTIONAL
+        !http_code TYPE integer OPTIONAL
+        !code      TYPE string OPTIONAL
+        !response  TYPE string OPTIONAL
+        !message   TYPE string OPTIONAL .
+    CLASS-METHODS raise
+      IMPORTING
+        !message TYPE string
+      RAISING
+        zcx_convertapi_exception .
+    CLASS-METHODS raise_classic
+      IMPORTING
+        !method    TYPE string
+        !exception TYPE string
+        !message   TYPE string
+      RAISING
+        zcx_convertapi_exception .
+    CLASS-METHODS raise_response
+      IMPORTING
+        !http_code TYPE integer
+        !response  TYPE string OPTIONAL
+      RAISING
+        zcx_convertapi_exception .
 
     METHODS if_message~get_longtext
         REDEFINITION .
@@ -53,7 +54,7 @@ ENDCLASS.
 
 
 
-CLASS ZCX_CONVERTAPI_EXCEPTION IMPLEMENTATION.
+CLASS zcx_convertapi_exception IMPLEMENTATION.
 
 
   METHOD constructor ##ADT_SUPPRESS_GENERATION.
@@ -67,6 +68,11 @@ CLASS ZCX_CONVERTAPI_EXCEPTION IMPLEMENTATION.
       if_t100_message~t100key = textid.
     ENDIF.
 
+    me->code = code.
+    me->http_code = http_code.
+    me->message = message.
+    me->response = response.
+
   ENDMETHOD.
 
 
@@ -74,28 +80,30 @@ CLASS ZCX_CONVERTAPI_EXCEPTION IMPLEMENTATION.
 
     DATA ls_textid LIKE if_t100_message=>t100key.
 
-    ls_textid-msgid = 'ZCONVERAPI'.
-    ls_textid-msgno = '001'.
+    ls_textid-msgid = 'ZCONVERTAPI'.
+    ls_textid-msgno = '000'.
     ls_textid-attr1 = method.
-    ls_textid-attr4 = exception.
+    ls_textid-attr2 = exception.
+    ls_textid-attr3 = message.
 
     RAISE EXCEPTION TYPE zcx_convertapi_exception
       EXPORTING
-        textid    = ls_textid.
+        textid  = ls_textid
+        message = message.
 
   ENDMETHOD.
 
-  METHOD RAISE.
+  METHOD raise.
 
     DATA ls_textid LIKE if_t100_message=>t100key.
 
-    ls_textid-msgid = 'ZCONVERAPI'.
+    ls_textid-msgid = 'ZCONVERTAPI'.
     ls_textid-msgno = '002'.
     ls_textid-attr1 = message.
 
     RAISE EXCEPTION TYPE zcx_convertapi_exception
       EXPORTING
-        textid    = ls_textid.
+        textid = ls_textid.
 
   ENDMETHOD.
 
@@ -110,8 +118,8 @@ CLASS ZCX_CONVERTAPI_EXCEPTION IMPLEMENTATION.
       END OF ls_response.
 
 
-    ls_textid-msgid = 'ZCONVERAPI'.
-    ls_textid-msgno = '000'.
+    ls_textid-msgid = 'ZCONVERTAPI'.
+    ls_textid-msgno = '001'.
     ls_textid-attr1 = http_code.
     ls_textid-attr4 = response.
 
@@ -130,7 +138,11 @@ CLASS ZCX_CONVERTAPI_EXCEPTION IMPLEMENTATION.
 
     RAISE EXCEPTION TYPE zcx_convertapi_exception
       EXPORTING
-        textid    = ls_textid.
+        textid = ls_textid
+        http_code = http_code
+        code = ls_response-code
+        message = ls_response-message
+        response = response.
 
   ENDMETHOD.
 
@@ -138,8 +150,10 @@ CLASS ZCX_CONVERTAPI_EXCEPTION IMPLEMENTATION.
 
     IF me->response IS NOT INITIAL.
       result = me->response.
+    ELSEIF message IS NOT INITIAL.
+      result = me->message.
     ELSE.
-      result = super->if_message~get_longtext( preserve_newlines = preserve_newlines ).
+      super->if_message~get_longtext( preserve_newlines = preserve_newlines ).
     ENDIF.
 
   ENDMETHOD.

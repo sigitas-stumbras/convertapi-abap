@@ -12,11 +12,18 @@ CLASS lcl_fs DEFINITION.
       RETURNING
         VALUE(rv_filename) TYPE string.
 
-
-    CLASS-METHODS read_file
+    CLASS-METHODS get_filename_from_url
       IMPORTING
-        iv_path             TYPE string
+        iv_url            TYPE string
       RETURNING
-        VALUE(rv_content) TYPE xstring.
+        VALUE(rv_filename) TYPE string.
+
+    CLASS-METHODS read_physical_file
+      IMPORTING
+        iv_path           TYPE string
+      RETURNING
+        VALUE(rv_content) TYPE xstring
+      RAISING
+        zcx_convertapi_exception.
 
 ENDCLASS.

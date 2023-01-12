@@ -12,13 +12,19 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZCONVERTAPI</ARBGB>
      <MSGNR>000</MSGNR>
-     <TEXT>&amp;1 has returned exception &amp;2</TEXT>
+     <TEXT>&amp;1 classic exception &amp;2. &amp;3 &amp;4</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCONVERTAPI</ARBGB>
      <MSGNR>001</MSGNR>
      <TEXT>HTTP error &amp;1. ConvertAPI error &amp;2 &amp;3. See long text</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCONVERTAPI</ARBGB>
+     <MSGNR>002</MSGNR>
+     <TEXT>&amp;1 &amp;2 &amp;3 &amp;4</TEXT>
     </T100>
    </T100>
    <LONGTEXTS>

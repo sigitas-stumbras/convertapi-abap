@@ -36,7 +36,9 @@ CLASS zcl_convertapi_file DEFINITION
         !content        TYPE xstring OPTIONAL
         !content_base64 TYPE string OPTIONAL
       RETURNING
-        VALUE(ro_file)  TYPE REF TO zif_convertapi_file.
+        VALUE(ro_file)  TYPE REF TO zif_convertapi_file
+      RAISING
+        zcx_convertapi_exception.
 
 ENDCLASS.
 
@@ -45,9 +47,18 @@ CLASS zcl_convertapi_file IMPLEMENTATION.
 
   METHOD factory.
     DATA: lo_file TYPE REF TO zcl_convertapi_file.
+    DATA: lv_file_name TYPE string.
 
     IF convertapi_id IS INITIAL AND name IS INITIAL AND ext IS INITIAL.
+      " TODO
+    ENDIF.
 
+    IF name IS NOT INITIAL.
+      lv_file_name = name.
+      FIND REGEX '[\x00-\x31\\/:"*?<>|]+' IN lv_file_name. " striping filename invalid characters
+      IF sy-subrc <> 0.
+        zcx_convertapi_exception=>raise( message = 'Illegal character in filename' ).
+      ENDIF.
     ENDIF.
 
     lo_file =  NEW zcl_convertapi_file( ).
@@ -85,7 +96,9 @@ CLASS zcl_convertapi_file IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD zif_convertapi_file~delete_service_side_copy.
-    client->delete( io_file = me ).
+    IF me->convertapi_id IS NOT INITIAL.
+      client->delete( io_file = me ).
+    ENDIF.
     ro_same_file = me.
   ENDMETHOD.
 
@@ -102,6 +115,7 @@ CLASS zcl_convertapi_file IMPLEMENTATION.
 
     ENDIF.
     rv_content = content_bin.
+    me->size = xstrlen( me->content_bin ) .
 
   ENDMETHOD.
 
@@ -151,12 +165,12 @@ CLASS zcl_convertapi_file IMPLEMENTATION.
     ).
 
     CASE lines( lt_result_files[] ).
-    WHEN 0.
+      WHEN 0.
         zcx_convertapi_exception=>raise( 'Conversion did not return any files' ).
-    WHEN 1.
-      ro_new_file = lt_result_files[ 1 ].
-    WHEN OTHERS.
-      zcx_convertapi_exception=>raise( 'Conversion returned more than one file' ).
+      WHEN 1.
+        ro_new_file = lt_result_files[ 1 ].
+      WHEN OTHERS.
+        zcx_convertapi_exception=>raise( 'Conversion returned more than one file' ).
     ENDCASE.
 
   ENDMETHOD.
