@@ -16,7 +16,7 @@ lv_pdf_content = lo_docx_file->convert_to( 'pdf' )->get_content( ).
 
 For a complete up-to-date list of supported file formats, conversions and other capabilities please see: https://www.convertapi.com/doc
 
-> **Note:** We would like to make it very clear that this is not a file convertion library. This is a client library to consume a publicly accessible file conversion service, i.e., the content being converted will travel outside your ABAP system and your network. 
+> **Note:** We would like to make it very clear that this is not a file convertion library. This is a client library to consume a publicly accessible file conversion service - the content being converted will travel outside your ABAP system and your network. 
 
 ## Prerequisites
 
@@ -27,7 +27,25 @@ For a complete up-to-date list of supported file formats, conversions and other 
 
 > **Note:** Please make sure to add the root CA certificate of https://v2.convertapi.com sepecifically and not https://www.convertapi.com as they may have different root CAs.
 
-* Additional security settings may be required based on your particular SAP system, landscape and network setup. Please consult with your BASIS team regarding the requirments for your ABAP application server to access a public HTTPS service.
+* Additional security settings may be required based in your particular SAP system, landscape and network setup. Please consult with your BASIS team regarding the requirments for your ABAP application server to access a public HTTPS service.
+
+## Modes of operation
+
+ConvertAPI client has several modes of operation that can be used to better balance the network-use efficiency and security concerns for your particular use case.
+
+* **Service-side storage** - each file being converted would be first uploaded in a separate HTTP request and stored in ConvertAPI file storage service to be used for conversion. Result files are stored in ConvertAPI service as well where they are retrieved from in a separate request.
+* **No service-side storage** - the file(s) being converted are submited and the result file(s) are retrieved in a single service request. ConvertAPI file storage service is not be used.
+* **Manual** - This modes enables reuse of service-side copies of files for complex conversions to make more efficient use of network.
+
+None of the modes are mutually exclusive in any way - switching the modes should not break the code. In fact from the point of view of client usage the two modes *Service-side storage* and *No service-side storage* are indistinguishable. *Manual* mode requires certain additional coding to make full and good use of the mode.
+
+|  | Service-side storage | No service-side storage | Manual |
+|---|---|---|---|
+| Upload of file(s) to be converted  | Implicitly right before the conversion request | With the conversion request | By either explicit *file->upload()* method call or implicitly with the conversion request (for the file(s) that was not uploaded at the moment of the request) |
+| Download of result file(s) | Implicitly immediately after the conversion response | In the conversion response | *file->get_content()* method call |
+| **Auto-cleanup** after each conversion (delete service-side copies of all the files involved)| On | On | Off 
+| On run-time exception | Auto-cleanup is triggered | Auto-cleanup is triggered | No auto-cleanup |
+| Network traffic efficency | Good for unique single-step conversions | Least efficient (~40% worse than with service-side storage)  | Best for complex conversions |
 
 # ConvertAPI client API
 
