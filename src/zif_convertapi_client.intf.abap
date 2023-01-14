@@ -1,74 +1,97 @@
-interface ZIF_CONVERTAPI_CLIENT
-  public .
+INTERFACE zif_convertapi_client
+  PUBLIC .
 
+  TYPES ty_storage_mode TYPE integer .
+  TYPES ty_file_id      TYPE string .
+  TYPES tty_files       TYPE TABLE OF REF TO zif_convertapi_file WITH EMPTY KEY .
 
-  types TY_STORAGE_MODE type INTEGER .
-  types TY_FILE_ID type STRING .
-  types:
-    tty_files      TYPE TABLE OF REF TO zif_convertapi_file WITH EMPTY KEY .
-  types:
+  TYPES:
     BEGIN OF sty_parameter,
-           name  TYPE string,
-           value TYPE string,
-         END OF sty_parameter .
-  types:
-    tty_parameters TYPE STANDARD TABLE OF sty_parameter WITH KEY name .
+      name  TYPE string,
+      value TYPE string,
+    END OF sty_parameter .
 
-  constants VERSION type STRING value '0.0.1' ##NO_TEXT.
-  constants:
+  TYPES tty_parameters  TYPE STANDARD TABLE OF sty_parameter WITH KEY name .
+
+  CONSTANTS version TYPE string VALUE '0.0.1' ##NO_TEXT.
+
+  CONSTANTS:
     BEGIN OF c_param,
       file       TYPE string VALUE 'File',
       files      TYPE string VALUE 'Files',
       store_file TYPE string VALUE 'StoreFile',
       timeout    TYPE string VALUE 'Timeout',
     END OF c_param .
-  constants:
+
+  CONSTANTS:
     BEGIN OF c_storage_mode,
       use_service_storage TYPE ty_storage_mode VALUE 1,
       no_service_storage  TYPE ty_storage_mode VALUE 2,
       manual              TYPE ty_storage_mode VALUE 3,
     END OF c_storage_mode .
 
-  methods CREATE_FILE
-    importing
-      !IV_NAME type STRING
-      !IV_CONTENT type XSTRING
-    returning
-      value(RO_FILE) type ref to ZIF_CONVERTAPI_FILE
-    raising
-      ZCX_CONVERTAPI_EXCEPTION .
-  methods CREATE_FILE_FROM_FS
-    importing
-      !IV_PHYSICAL_FILE type STRING
-      !IV_FILENAME type STRING optional
-    returning
-      value(RO_FILE) type ref to ZIF_CONVERTAPI_FILE
-    raising
-      ZCX_CONVERTAPI_EXCEPTION .
-  methods CREATE_FILE_FROM_URL
-    importing
-      !IV_URL type STRING
-      !IV_NAME type STRING
-    returning
-      value(RO_FILE) type ref to ZIF_CONVERTAPI_FILE
-    raising
-      ZCX_CONVERTAPI_EXCEPTION .
-  methods CREATE_CONVERSION
-    importing
-      !IV_TARGET_FORMAT type ANY
-      !IV_SOURCE_FORMAT type STRING optional
-      !IT_PARAMETERS type ZIF_CONVERTAPI_CLIENT=>TTY_PARAMETERS optional
-    returning
-      value(RO_CONVERSION) type ref to ZIF_CONVERTAPI_CONVERSION
-    raising
-      ZCX_CONVERTAPI_EXCEPTION .
-  methods SET_AUTO_CLEANUP
-    importing
-      !IV_ENABLED type ABAP_BOOL .
-  methods GET_AUTO_CLEANUP
-    returning
-      value(RV_ENABLED) type ABAP_BOOL .
-  methods CLEANUP
-    raising
-      ZCX_CONVERTAPI_EXCEPTION .
-endinterface.
+  METHODS create_file
+    IMPORTING
+      !iv_name       TYPE string
+      !iv_content    TYPE xstring
+    RETURNING
+      VALUE(ro_file) TYPE REF TO zif_convertapi_file
+    RAISING
+      zcx_convertapi_exception .
+
+  METHODS create_file_from_fs
+    IMPORTING
+      !iv_physical_file TYPE string
+      !iv_filename      TYPE string OPTIONAL
+    RETURNING
+      VALUE(ro_file)    TYPE REF TO zif_convertapi_file
+    RAISING
+      zcx_convertapi_exception .
+
+  METHODS create_file_from_url
+    IMPORTING
+      !iv_url        TYPE string
+      !iv_name       TYPE string
+    RETURNING
+      VALUE(ro_file) TYPE REF TO zif_convertapi_file
+    RAISING
+      zcx_convertapi_exception .
+
+  METHODS create_conversion
+    IMPORTING
+      !iv_target_format    TYPE any
+      !iv_source_format    TYPE string OPTIONAL
+      !it_parameters       TYPE zif_convertapi_client=>tty_parameters OPTIONAL
+    RETURNING
+      VALUE(ro_conversion) TYPE REF TO zif_convertapi_conversion
+    RAISING
+      zcx_convertapi_exception .
+
+  METHODS set_auto_cleanup
+    IMPORTING
+      !iv_enabled TYPE abap_bool .
+
+  METHODS get_auto_cleanup
+    RETURNING
+      VALUE(rv_enabled) TYPE abap_bool .
+
+  METHODS cleanup
+    RAISING
+      zcx_convertapi_exception .
+
+  METHODS get_user_info
+    RETURNING
+      VALUE(rs_user_info) TYPE zconvertapi_s_user_info
+    RAISING
+      zcx_convertapi_exception.
+
+  METHODS get_usage_history
+    IMPORTING
+      iv_start_date        TYPE dats
+      iv_end_date          TYPE dats OPTIONAL
+    RETURNING
+      VALUE(rt_history) TYPE zconvertapi_tt_usage_history
+    RAISING
+      zcx_convertapi_exception.
+
+ENDINTERFACE.

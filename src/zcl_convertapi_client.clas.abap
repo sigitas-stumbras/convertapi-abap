@@ -26,58 +26,6 @@ CLASS zcl_convertapi_client DEFINITION
 
   PRIVATE SECTION.
 
-    TYPES:
-      BEGIN OF sty_upload_response_body,
-        file_id   TYPE zif_convertapi_client=>ty_file_id,
-        file_name TYPE string,
-        file_ext  TYPE string,
-        file_size TYPE integer,
-        url       TYPE string,
-      END OF sty_upload_response_body .
-
-    TYPES:
-      BEGIN OF sty_convert_request_filevalue,
-        name TYPE string,
-        data TYPE string,
-        url  TYPE string,
-        id   TYPE zif_convertapi_client=>ty_file_id,
-      END OF sty_convert_request_filevalue .
-
-    TYPES:
-      BEGIN OF sty_convert_request_parameters,
-        name        TYPE string,
-        value       TYPE string,
-        file_value  TYPE zcl_convertapi_client=>sty_convert_request_filevalue,
-        file_values TYPE TABLE OF zcl_convertapi_client=>sty_convert_request_filevalue WITH EMPTY KEY,
-      END OF sty_convert_request_parameters .
-
-    TYPES:
-      BEGIN OF sty_convert_response_file,
-        file_name TYPE string,
-        file_ext  TYPE string,
-        file_size TYPE integer,
-        file_id   TYPE string,
-        url       TYPE string,
-        file_data TYPE string,
-      END OF sty_convert_response_file .
-
-    TYPES:
-      BEGIN OF sty_convert_request_body,
-        parameters TYPE TABLE OF zcl_convertapi_client=>sty_convert_request_parameters WITH EMPTY KEY,
-      END OF sty_convert_request_body .
-
-    TYPES:
-      BEGIN OF sty_convert_response_body,
-        conversion_cost TYPE integer,
-        files           TYPE TABLE OF zcl_convertapi_client=>sty_convert_response_file WITH EMPTY KEY,
-      END OF sty_convert_response_body .
-
-    TYPES:
-      BEGIN OF sty_error_response_body,
-        code    TYPE integer,
-        message TYPE string,
-      END OF sty_error_response_body .
-
     DATA: http_client          TYPE REF TO if_http_client .
     DATA: api_secret           TYPE string .
     DATA: api_key              TYPE string .
@@ -181,7 +129,7 @@ CLASS zcl_convertapi_client DEFINITION
       IMPORTING
         io_file              TYPE REF TO zif_convertapi_file
       RETURNING
-        VALUE(rs_file_value) TYPE zcl_convertapi_client=>sty_convert_request_filevalue
+        VALUE(rs_file_value) TYPE sty_convert_request_filevalue
       RAISING
         zcx_convertapi_exception.
 
@@ -273,6 +221,124 @@ CLASS zcl_convertapi_client IMPLEMENTATION.
 
   ENDMETHOD.
 
+  METHOD zif_convertapi_client~get_usage_history.
+
+    DATA lv_end_date TYPE dats.
+    DATA lv_response_body TYPE string.
+    DATA lt_response TYPE tty_user_stats_response_body.
+    DATA lv_http_response_code TYPE integer.
+    DATA ls_history LIKE LINE OF rt_history.
+
+    FIELD-SYMBOLS <response> LIKE LINE OF lt_response.
+
+    IF iv_end_date IS INITIAL.
+      lv_end_date = sy-datum.
+    ELSE.
+      lv_end_date = iv_end_date.
+    ENDIF.
+
+    http_client->request->set_version( version = http_client->request->co_protocol_version_1_1 ).
+    http_client->request->set_method( method = c_request_method-get ).
+
+    DATA(lv_uri) = `/user/statistic?startDate=` && lcl_fs=>iso_date( iv_start_date ) && `&endDate=` && lcl_fs=>iso_date( lv_end_date ).
+
+    cl_http_utility=>set_request_uri(
+      request = http_client->request
+      uri     = `/user/statistic?startDate=` && lcl_fs=>iso_date( iv_start_date ) && `&endDate=` && lcl_fs=>iso_date( lv_end_date ) ).
+
+    add_authorization_credentials( http_client->request ).
+
+    lv_http_response_code = me->send_request(  ).
+
+    IF lv_http_response_code = 200.
+
+      lv_response_body = http_client->response->get_cdata( ).
+
+      me->parse_json(
+        EXPORTING
+          im_json = lv_response_body
+        CHANGING
+          ch_data = lt_response
+      ).
+
+      LOOP AT lt_response ASSIGNING <response>.
+        CLEAR: ls_history.
+        ls_history-id                      = <response>-id.
+        ls_history-had_result              = <response>-result.
+        ls_history-datestamp               = lcl_fs=>iso_date_to_tzntstmpl( <response>-date_stamp ).
+        ls_history-conversion_time         = <response>-conversion_time.
+        ls_history-conversion_cost         = <response>-conversion_cost.
+        ls_history-converter               = <response>-converter.
+        ls_history-source_file_format      = <response>-source_file_format.
+        ls_history-destination_file_format = <response>-destination_file_format.
+        ls_history-agent                   = <response>-agent.
+        ls_history-os                      = <response>-os.
+        ls_history-ip                      = <response>-ip.
+        ls_history-source                  = <response>-source.
+        ls_history-error                   = <response>-error.
+        ls_history-user_id                 = <response>-user_id.
+
+        APPEND ls_history TO rt_history.
+      ENDLOOP.
+
+    ELSE.
+
+      zcx_convertapi_exception=>raise_response(
+          http_code                = lv_http_response_code
+          response                 = lv_response_body
+      ).
+
+    ENDIF.
+
+  ENDMETHOD.
+
+  METHOD zif_convertapi_client~get_user_info.
+
+    DATA lv_response_body TYPE string.
+    DATA ls_response TYPE sty_user_response_body.
+    DATA lv_http_response_code TYPE integer.
+
+    http_client->request->set_version( version = http_client->request->co_protocol_version_1_1 ).
+    http_client->request->set_method( method = c_request_method-get ).
+
+    cl_http_utility=>set_request_uri(
+      request = http_client->request
+      uri     = `/user` ).
+
+    add_authorization_credentials( http_client->request ).
+
+    lv_http_response_code = me->send_request(  ).
+
+    IF lv_http_response_code = 200.
+
+      lv_response_body = http_client->response->get_cdata( ).
+
+      me->parse_json(
+        EXPORTING
+          im_json = lv_response_body
+        CHANGING
+          ch_data = ls_response
+      ).
+
+      rs_user_info-user_id      = ls_response-id.
+      rs_user_info-secret       = ls_response-secret.
+      rs_user_info-api_key      = ls_response-api_key.
+      rs_user_info-full_name    = ls_response-full_name.
+      rs_user_info-email        = ls_response-email.
+      rs_user_info-seconds_left = ls_response-seconds_left.
+      rs_user_info-max_workers  = ls_response-max_workers.
+
+    ELSE.
+
+      zcx_convertapi_exception=>raise_response(
+          http_code                = lv_http_response_code
+          response                 = lv_response_body
+      ).
+
+    ENDIF.
+
+  ENDMETHOD.
+
   METHOD zif_convertapi_client~get_auto_cleanup.
     rv_enabled = auto_cleanup.
   ENDMETHOD.
@@ -349,12 +415,8 @@ CLASS zcl_convertapi_client IMPLEMENTATION.
 
     http_client->request->set_version( version = http_client->request->co_protocol_version_1_1 ).
     http_client->request->set_method( method = c_request_method-post ).
+    http_client->request->set_content_type( c_content_type-application_json ).
     http_client->request->set_cdata( data = lv_request_body ).
-
-    http_client->request->set_header_field(
-        name = c_http_header-content_type
-        value = c_content_type-application_json
-    ).
 
     add_authorization_credentials( http_client->request ).
 

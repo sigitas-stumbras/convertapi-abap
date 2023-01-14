@@ -51,4 +51,18 @@ CLASS lcl_fs IMPLEMENTATION.
     CLOSE DATASET iv_path.
   ENDMETHOD.
 
+  METHOD iso_date_to_tzntstmpl.
+    DATA lv_date TYPE string.
+
+    lv_date = iv_isotimestamp.
+    REPLACE ALL OCCURRENCES OF REGEX '[T:-]+' IN lv_date WITH ''.
+
+    rv_timestamp = lv_date.
+
+  ENDMETHOD.
+
+  METHOD iso_date.
+    rv_iso = iv_date+0(4) && '-' && iv_date+4(2) && '-' && iv_date+6(2).
+  ENDMETHOD.
+
 ENDCLASS.
