@@ -31,12 +31,6 @@
     </SEOSUBCOTX>
     <SEOSUBCOTX>
      <CMPNAME>CREATE_FILE_FROM_URL</CMPNAME>
-     <SCONAME>IV_NAME</SCONAME>
-     <LANGU>E</LANGU>
-     <DESCRIPT>Filename for service use</DESCRIPT>
-    </SEOSUBCOTX>
-    <SEOSUBCOTX>
-     <CMPNAME>CREATE_FILE_FROM_URL</CMPNAME>
      <SCONAME>IV_URL</SCONAME>
      <LANGU>E</LANGU>
      <DESCRIPT>File URL that can be accessed by ConvertAPI service</DESCRIPT>

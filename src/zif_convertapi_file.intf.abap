@@ -1,48 +1,48 @@
-interface ZIF_CONVERTAPI_FILE
-  public .
+INTERFACE zif_convertapi_file
+  PUBLIC .
 
 
-  methods UPLOAD
-    returning
-      value(RO_SAME_FILE) type ref to ZIF_CONVERTAPI_FILE
-    raising
-      ZCX_CONVERTAPI_EXCEPTION .
-  methods DELETE_SERVICE_SIDE_COPY
-    returning
-      value(RO_SAME_FILE) type ref to ZIF_CONVERTAPI_FILE
-    raising
-      ZCX_CONVERTAPI_EXCEPTION .
-  methods GET_CONTENT
-    returning
-      value(RV_CONTENT) type XSTRING
-    raising
-      ZCX_CONVERTAPI_EXCEPTION .
-  methods GET_SIZE
-    returning
-      value(RV_SIZE) type INTEGER .
-  methods GET_ID
-    returning
-      value(RV_ID) type STRING .
-  methods GET_CONVERTAPI_URL
-    returning
-      value(RV_URL) type STRING .
-  methods GET_EXTERNAL_URL
-    returning
-      value(RV_URL) type STRING .
-  methods GET_NAME
-    returning
-      value(RV_NAME) type STRING .
-  methods GET_EXT
-    returning
-      value(RV_EXT) type STRING .
-  methods CONVERT_TO
-    importing
-      !I_CONVERSION type ANY
-    returning
-      value(RO_NEW_FILE) type ref to ZIF_CONVERTAPI_FILE
-    raising
-      ZCX_CONVERTAPI_EXCEPTION .
-  methods HAS_SERVICE_SIDE_COPY
-    returning
-      value(RV_RESULT) type ABAP_BOOL .
-endinterface.
+  METHODS upload
+    RETURNING
+      VALUE(ro_same_file) TYPE REF TO zif_convertapi_file
+    RAISING
+      zcx_convertapi_exception .
+  METHODS delete_service_side_copy
+    RETURNING
+      VALUE(ro_same_file) TYPE REF TO zif_convertapi_file
+    RAISING
+      zcx_convertapi_exception .
+  METHODS get_content
+    RETURNING
+      VALUE(rv_content) TYPE xstring
+    RAISING
+      zcx_convertapi_exception .
+  METHODS get_size
+    RETURNING
+      VALUE(rv_size) TYPE integer .
+  METHODS get_id
+    RETURNING
+      VALUE(rv_id) TYPE string .
+  METHODS get_convertapi_url
+    RETURNING
+      VALUE(rv_url) TYPE string .
+  METHODS get_external_url
+    RETURNING
+      VALUE(rv_url) TYPE string .
+  METHODS get_name
+    RETURNING
+      VALUE(rv_name) TYPE string .
+  METHODS get_ext
+    RETURNING
+      VALUE(rv_ext) TYPE string .
+  METHODS convert_to
+    IMPORTING
+      !i_conversion      TYPE any
+    RETURNING
+      VALUE(ro_new_file) TYPE REF TO zif_convertapi_file
+    RAISING
+      zcx_convertapi_exception .
+  METHODS has_service_side_copy
+    RETURNING
+      VALUE(rv_result) TYPE abap_bool .
+ENDINTERFACE.

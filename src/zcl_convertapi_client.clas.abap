@@ -13,10 +13,9 @@ CLASS zcl_convertapi_client DEFINITION
 
     CLASS-METHODS create
       IMPORTING
-        !iv_api_secret   TYPE string
-        !iv_api_key      TYPE string
         !io_http_client  TYPE REF TO if_http_client
-        !iv_log_handle   TYPE balloghndl OPTIONAL
+        !iv_api_secret   TYPE string OPTIONAL
+        !iv_api_key      TYPE string OPTIONAL
         !iv_storage_mode TYPE zif_convertapi_client=>ty_storage_mode DEFAULT zif_convertapi_client=>c_storage_mode-use_service_storage
         !iv_auto_cleanup TYPE abap_bool DEFAULT abap_true
       RETURNING
@@ -153,7 +152,6 @@ CLASS zcl_convertapi_client IMPLEMENTATION.
     lo_client->api_key              = iv_api_key.
     lo_client->http_client          = io_http_client.
     lo_client->storage_mode         = iv_storage_mode.
-    lo_client->log_handle           = iv_log_handle.
 
     IF iv_storage_mode = zif_convertapi_client=>c_storage_mode-manual.
       lo_client->auto_cleanup = abap_false.
@@ -180,7 +178,7 @@ CLASS zcl_convertapi_client IMPLEMENTATION.
 
     ro_file = zcl_convertapi_file=>factory(
         client  = me
-        name    = iv_name
+        name    = iv_filename
         content = iv_content
     ).
 
@@ -215,7 +213,7 @@ CLASS zcl_convertapi_client IMPLEMENTATION.
 
     ro_file = zcl_convertapi_file=>factory(
         client = me
-        name   = iv_name
+        name   = iv_filename
         url    = iv_url
     ).
 
@@ -223,7 +221,7 @@ CLASS zcl_convertapi_client IMPLEMENTATION.
 
   METHOD zif_convertapi_client~get_usage_history.
 
-    DATA lv_end_date TYPE dats.
+    DATA lv_date_to TYPE dats.
     DATA lv_response_body TYPE string.
     DATA lt_response TYPE tty_user_stats_response_body.
     DATA lv_http_response_code TYPE integer.
@@ -231,20 +229,18 @@ CLASS zcl_convertapi_client IMPLEMENTATION.
 
     FIELD-SYMBOLS <response> LIKE LINE OF lt_response.
 
-    IF iv_end_date IS INITIAL.
-      lv_end_date = sy-datum.
+    IF iv_date_to IS INITIAL.
+      lv_date_to = sy-datum.
     ELSE.
-      lv_end_date = iv_end_date.
+      lv_date_to = iv_date_to.
     ENDIF.
 
     http_client->request->set_version( version = http_client->request->co_protocol_version_1_1 ).
     http_client->request->set_method( method = c_request_method-get ).
 
-    DATA(lv_uri) = `/user/statistic?startDate=` && lcl_fs=>iso_date( iv_start_date ) && `&endDate=` && lcl_fs=>iso_date( lv_end_date ).
-
     cl_http_utility=>set_request_uri(
       request = http_client->request
-      uri     = `/user/statistic?startDate=` && lcl_fs=>iso_date( iv_start_date ) && `&endDate=` && lcl_fs=>iso_date( lv_end_date ) ).
+      uri     = `/user/statistic?startDate=` && lcl_fs=>iso_date( iv_date_from ) && `&endDate=` && lcl_fs=>iso_date( lv_date_to ) ).
 
     add_authorization_credentials( http_client->request ).
 
@@ -714,7 +710,7 @@ CLASS zcl_convertapi_client IMPLEMENTATION.
       ENDLOOP.
     ENDIF.
 
-    lt_parameters = io_conversion->get_parameters(  ).
+    lt_parameters = io_conversion->get_all_parameters(  ).
     LOOP AT lt_parameters[] ASSIGNING <conv_param>.
       APPEND INITIAL LINE TO ls_body-parameters ASSIGNING <body_param>.
       <body_param>-name  = <conv_param>-name.

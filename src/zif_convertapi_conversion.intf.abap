@@ -23,7 +23,7 @@ INTERFACE zif_convertapi_conversion
     RETURNING
       VALUE(rv_value) TYPE string.
 
-  METHODS get_parameters
+  METHODS get_all_parameters
     RETURNING
       VALUE(rt_parameters) TYPE zif_convertapi_conversion=>tty_parameters.
 

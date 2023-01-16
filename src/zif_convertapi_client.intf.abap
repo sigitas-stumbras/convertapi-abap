@@ -32,7 +32,7 @@ INTERFACE zif_convertapi_client
 
   METHODS create_file
     IMPORTING
-      !iv_name       TYPE string
+      !iv_filename   TYPE string
       !iv_content    TYPE xstring
     RETURNING
       VALUE(ro_file) TYPE REF TO zif_convertapi_file
@@ -51,7 +51,7 @@ INTERFACE zif_convertapi_client
   METHODS create_file_from_url
     IMPORTING
       !iv_url        TYPE string
-      !iv_name       TYPE string
+      !iv_filename   TYPE string
     RETURNING
       VALUE(ro_file) TYPE REF TO zif_convertapi_file
     RAISING
@@ -87,8 +87,8 @@ INTERFACE zif_convertapi_client
 
   METHODS get_usage_history
     IMPORTING
-      iv_start_date        TYPE dats
-      iv_end_date          TYPE dats OPTIONAL
+      iv_date_from    TYPE dats
+      iv_date_to      TYPE dats OPTIONAL
     RETURNING
       VALUE(rt_history) TYPE zconvertapi_tt_usage_history
     RAISING

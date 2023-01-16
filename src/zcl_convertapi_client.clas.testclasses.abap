@@ -65,21 +65,39 @@ CLASS ltc_client_test IMPLEMENTATION.
     m_api_secret = '5EI6bEJ7TKH4J4PQ'.
     "----------------------------------------------------------------------------------------------
 
-    cl_http_client=>create_by_url(
+
+    cl_http_client=>create_by_destination(
       EXPORTING
-        url               =  'https://v2.convertapi.com:443'
-        ssl_id            = 'ANONYM'
+        destination              = 'CONVERTAPI'    " Logical destination (specified in function call)
       IMPORTING
-        client             = http_client
+        client                   = http_client    " HTTP Client Abstraction
       EXCEPTIONS
-        argument_not_found = 1
-        plugin_not_active  = 2
-        internal_error     = 3
-        OTHERS             = 4
+        argument_not_found       = 1
+        destination_not_found    = 2
+        destination_no_authority = 3
+        plugin_not_active        = 4
+        internal_error           = 5
+        others                   = 6
     ).
     IF sy-subrc <> 0.
-      MESSAGE 'Could not create HTTP client - RC=' && sy-subrc TYPE 'E'.
+        MESSAGE 'Could not create HTTP client - RC=' && sy-subrc TYPE 'E'.
     ENDIF.
+
+*    cl_http_client=>create_by_url(
+*      EXPORTING
+*        url               =  'https://v2.convertapi.com:443'
+*        ssl_id            = 'ANONYM'
+*      IMPORTING
+*        client             = http_client
+*      EXCEPTIONS
+*        argument_not_found = 1
+*        plugin_not_active  = 2
+*        internal_error     = 3
+*        OTHERS             = 4
+*    ).
+*    IF sy-subrc <> 0.
+*      MESSAGE 'Could not create HTTP client - RC=' && sy-subrc TYPE 'E'.
+*    ENDIF.
 
     ls_log-object    = 'ZCONVERTAPI'.
     ls_log-subobject = 'UNITTEST'.
@@ -142,11 +160,8 @@ CLASS ltc_client_test IMPLEMENTATION.
     DATA lo_conversion TYPE REF TO zif_convertapi_conversion.
 
     lo_client = zcl_convertapi_client=>create(
-        iv_api_key = m_api_key
-        iv_api_secret = m_api_secret
         io_http_client = http_client
         iv_storage_mode = zif_convertapi_client=>c_storage_mode-no_service_storage
-        iv_log_handle = m_log_handle
       ).
 
     lo_conversion = lo_client->create_conversion(
@@ -221,7 +236,7 @@ CLASS ltc_client_test IMPLEMENTATION.
     cl_abap_unit_assert=>assert_table_contains(
       EXPORTING
         line             = VALUE zif_convertapi_conversion=>sty_parameter( name = zif_convertapi_client=>c_param-store_file value = 'true'  )
-        table            = lo_conversion->get_parameters( )
+        table            = lo_conversion->get_all_parameters( )
         msg              = 'Conversion - set/get multiple parameters fail'
     ).
 
@@ -236,7 +251,7 @@ CLASS ltc_client_test IMPLEMENTATION.
     cl_abap_unit_assert=>assert_table_contains(
       EXPORTING
         line             = VALUE zif_convertapi_conversion=>sty_parameter( name = zif_convertapi_client=>c_param-store_file value = 'true'  )
-        table            = lo_conversion->get_parameters( )
+        table            = lo_conversion->get_all_parameters( )
         msg              = 'Conversion - set multiple parameters no-overwriting fail'
     ).
 
@@ -251,7 +266,7 @@ CLASS ltc_client_test IMPLEMENTATION.
     cl_abap_unit_assert=>assert_table_contains(
       EXPORTING
         line             = VALUE zif_convertapi_conversion=>sty_parameter(  name = zif_convertapi_client=>c_param-timeout    value = '2' )
-        table            = lo_conversion->get_parameters( )
+        table            = lo_conversion->get_all_parameters( )
         msg              =  'Conversion - set multiple parameters overwriting fail'
     ).
 
@@ -269,26 +284,23 @@ CLASS ltc_client_test IMPLEMENTATION.
     DATA lo_file TYPE REF TO zif_convertapi_file.
 
     lo_client = zcl_convertapi_client=>create(
-        iv_api_key = m_api_key
-        iv_api_secret = m_api_secret
         io_http_client = http_client
         iv_storage_mode = zif_convertapi_client=>c_storage_mode-no_service_storage
-        iv_log_handle = m_log_handle
       ).
 
     lo_file ?= lo_client->create_file(
-        iv_name    = 'píẍẽl.gif'
+        iv_filename    = 'píẍẽl.gif'
         iv_content = c_pixel_gif
     ).
 
     DATA(lo_file_2) = lo_client->create_file(
-        iv_name    = 'píxel.gif'
+        iv_filename    = 'píxel.gif'
         iv_content = c_pixel_gif
     ).
 
     DATA(lo_file_3) = lo_client->create_file_from_url(
        iv_url  = 'https://www.convertapi.com/static/img/logo.svg'
-       iv_name = 'logo.svg'
+       iv_filename = 'logo.svg'
     ).
 
     lo_file->upload(  ).
@@ -343,7 +355,6 @@ CLASS ltc_client_test IMPLEMENTATION.
         iv_api_secret = m_api_secret
         io_http_client = http_client
         iv_storage_mode = zif_convertapi_client=>c_storage_mode-use_service_storage
-        iv_log_handle = m_log_handle
       ).
 
     covert_1px_gif_to_webp_priv(
@@ -364,7 +375,6 @@ CLASS ltc_client_test IMPLEMENTATION.
         iv_api_secret = m_api_secret
         io_http_client = http_client
         iv_storage_mode = zif_convertapi_client=>c_storage_mode-no_service_storage
-        iv_log_handle = m_log_handle
       ).
 
     covert_1px_gif_to_webp_priv(
@@ -385,7 +395,6 @@ CLASS ltc_client_test IMPLEMENTATION.
         iv_api_secret = m_api_secret
         io_http_client = http_client
         iv_storage_mode = zif_convertapi_client=>c_storage_mode-manual
-        iv_log_handle = m_log_handle
       ).
 
     covert_1px_gif_to_webp_priv(
@@ -406,7 +415,6 @@ CLASS ltc_client_test IMPLEMENTATION.
         iv_api_secret = m_api_secret
         io_http_client = http_client
         iv_storage_mode = zif_convertapi_client=>c_storage_mode-no_service_storage
-        iv_log_handle = m_log_handle
       ).
 
     covert_2xgif_to_and_from_zip(
@@ -427,7 +435,6 @@ CLASS ltc_client_test IMPLEMENTATION.
         iv_api_secret = m_api_secret
         io_http_client = http_client
         iv_storage_mode = zif_convertapi_client=>c_storage_mode-use_service_storage
-        iv_log_handle = m_log_handle
       ).
 
     covert_2xgif_to_and_from_zip(
@@ -448,7 +455,6 @@ CLASS ltc_client_test IMPLEMENTATION.
         iv_api_secret = m_api_secret
         io_http_client = http_client
         iv_storage_mode = zif_convertapi_client=>c_storage_mode-manual
-        iv_log_handle = m_log_handle
       ).
 
     covert_2xgif_to_and_from_zip(
@@ -469,7 +475,7 @@ CLASS ltc_client_test IMPLEMENTATION.
     DATA lo_convertapi_request_error TYPE REF TO zcx_convertapi_exception.
 
     lo_input_file = io_client->create_file(
-        iv_name    = 'pixel.gif'
+        iv_filename    = 'pixel.gif'
         iv_content = c_pixel_gif
     ).
 
@@ -509,12 +515,12 @@ CLASS ltc_client_test IMPLEMENTATION.
     DATA lt_unziped_files TYPE zif_convertapi_client=>tty_files.
 
     APPEND io_client->create_file(
-        iv_name    = 'pixel1.gif'
+        iv_filename    = 'pixel1.gif'
         iv_content = c_pixel_gif
     ) TO lt_source.
 
     APPEND io_client->create_file(
-        iv_name    = 'pixel2.gif'
+        iv_filename    = 'pixel2.gif'
         iv_content = c_pixel_gif
     ) TO lt_source.
 
