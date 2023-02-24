@@ -19,7 +19,7 @@ INTERFACE zif_convertapi_file
       zcx_convertapi_exception .
   METHODS get_size
     RETURNING
-      VALUE(rv_size) TYPE integer .
+      VALUE(rv_size) TYPE i .
   METHODS get_id
     RETURNING
       VALUE(rv_id) TYPE string .

@@ -22,14 +22,14 @@ CLASS zcl_convertapi_file DEFINITION
     DATA ext             TYPE string.
     DATA url             TYPE string.
     DATA convertapi_url  TYPE string.
-    DATA size            TYPE integer VALUE -1.
+    DATA size            TYPE i VALUE -1.
 
     CLASS-METHODS factory
       IMPORTING
         !client         TYPE REF TO zcl_convertapi_client
         !name           TYPE string OPTIONAL
         !ext            TYPE string OPTIONAL
-        !size           TYPE integer DEFAULT -1
+        !size           TYPE i DEFAULT -1
         !url            TYPE string OPTIONAL
         !convertapi_id  TYPE string OPTIONAL
         !convertapi_url TYPE string OPTIONAL

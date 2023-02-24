@@ -7,7 +7,7 @@
         file_id   TYPE zif_convertapi_client=>ty_file_id,
         file_name TYPE string,
         file_ext  TYPE string,
-        file_size TYPE integer,
+        file_size TYPE i,
         url       TYPE string,
       END OF sty_upload_response_body .
 
@@ -31,7 +31,7 @@
       BEGIN OF sty_convert_response_file,
         file_name TYPE string,
         file_ext  TYPE string,
-        file_size TYPE integer,
+        file_size TYPE i,
         file_id   TYPE string,
         url       TYPE string,
         file_data TYPE string,
@@ -44,13 +44,13 @@
 
     TYPES:
       BEGIN OF sty_convert_response_body,
-        conversion_cost TYPE integer,
+        conversion_cost TYPE i,
         files           TYPE TABLE OF sty_convert_response_file WITH EMPTY KEY,
       END OF sty_convert_response_body .
 
     TYPES:
       BEGIN OF sty_error_response_body,
-        code    TYPE integer,
+        code    TYPE i,
         message TYPE string,
       END OF sty_error_response_body .
 

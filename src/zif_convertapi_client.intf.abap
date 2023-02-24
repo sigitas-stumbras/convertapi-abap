@@ -1,7 +1,7 @@
 INTERFACE zif_convertapi_client
   PUBLIC .
 
-  TYPES ty_storage_mode TYPE integer .
+  TYPES ty_storage_mode TYPE i .
   TYPES ty_file_id      TYPE string .
   TYPES tty_files       TYPE TABLE OF REF TO zif_convertapi_file WITH EMPTY KEY .
 

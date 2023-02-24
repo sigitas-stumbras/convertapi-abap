@@ -86,13 +86,19 @@ CLASS zcl_convertapi_conversion IMPLEMENTATION.
 
   METHOD zif_convertapi_conversion~convert.
 
-    me->client->convert(
-      EXPORTING
-        i_source       = i_source
-        io_parameters  = me
-      IMPORTING
-        et_target_files = rt_files
-    ).
+    TRY.
+
+        me->client->convert(
+          EXPORTING
+            i_source       = i_source
+            io_parameters  = me
+          IMPORTING
+            et_target_files = rt_files
+        ).
+
+    CLEANUP.
+        client->exception_cleanup(  ).
+    ENDTRY.
 
   ENDMETHOD.
 
@@ -108,7 +114,7 @@ CLASS zcl_convertapi_conversion IMPLEMENTATION.
     ENDIF.
   ENDMETHOD.
 
-  METHOD zif_convertapi_conversion~get_parameters.
+  METHOD zif_convertapi_conversion~get_all_parameters.
     CLEAR: rt_parameters.
     APPEND LINES OF me->parameters TO rt_parameters.
   ENDMETHOD.

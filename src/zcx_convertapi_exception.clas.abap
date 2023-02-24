@@ -11,7 +11,7 @@ CLASS zcx_convertapi_exception DEFINITION
 
     CONSTANTS request_error TYPE sotr_conc VALUE '0800276976981EEDA185C80EE9C60CFB' ##NO_TEXT.
     CONSTANTS classic_exception TYPE sotr_conc VALUE '0800276976981EEDA1A41539A86FCCFB' ##NO_TEXT.
-    DATA http_code TYPE integer .
+    DATA http_code TYPE i .
     DATA code TYPE string .
     DATA response TYPE string.
     DATA message TYPE string.
@@ -22,7 +22,7 @@ CLASS zcx_convertapi_exception DEFINITION
       IMPORTING
         !textid    LIKE if_t100_message=>t100key OPTIONAL
         !previous  LIKE previous OPTIONAL
-        !http_code TYPE integer OPTIONAL
+        !http_code TYPE i OPTIONAL
         !code      TYPE string OPTIONAL
         !response  TYPE string OPTIONAL
         !message   TYPE string OPTIONAL .
@@ -40,7 +40,7 @@ CLASS zcx_convertapi_exception DEFINITION
         zcx_convertapi_exception .
     CLASS-METHODS raise_response
       IMPORTING
-        !http_code TYPE integer
+        !http_code TYPE i
         !response  TYPE string OPTIONAL
       RAISING
         zcx_convertapi_exception .

@@ -134,9 +134,11 @@ CLASS zcl_convertapi_client DEFINITION
 
     METHODS send_request
       RETURNING
-        VALUE(rv_response_code) TYPE integer
+        VALUE(rv_response_code) TYPE i
       RAISING
         zcx_convertapi_exception.
+
+    METHODS exception_cleanup.
 
 ENDCLASS.
 
@@ -224,7 +226,7 @@ CLASS zcl_convertapi_client IMPLEMENTATION.
     DATA lv_date_to TYPE dats.
     DATA lv_response_body TYPE string.
     DATA lt_response TYPE tty_user_stats_response_body.
-    DATA lv_http_response_code TYPE integer.
+    DATA lv_http_response_code TYPE i.
     DATA ls_history LIKE LINE OF rt_history.
 
     FIELD-SYMBOLS <response> LIKE LINE OF lt_response.
@@ -292,7 +294,7 @@ CLASS zcl_convertapi_client IMPLEMENTATION.
 
     DATA lv_response_body TYPE string.
     DATA ls_response TYPE sty_user_response_body.
-    DATA lv_http_response_code TYPE integer.
+    DATA lv_http_response_code TYPE i.
 
     http_client->request->set_version( version = http_client->request->co_protocol_version_1_1 ).
     http_client->request->set_method( method = c_request_method-get ).
@@ -361,7 +363,7 @@ CLASS zcl_convertapi_client IMPLEMENTATION.
     DATA lv_request_url    TYPE string.
     DATA lv_response_body  TYPE string.
     DATA ls_response       TYPE sty_convert_response_body.
-    DATA lv_http_response_code TYPE integer.
+    DATA lv_http_response_code TYPE i.
 
     FIELD-SYMBOLS: <file>        LIKE LINE OF ls_response-files.
     FIELD-SYMBOLS: <source_file> LIKE LINE OF lt_source_files.
@@ -465,7 +467,7 @@ CLASS zcl_convertapi_client IMPLEMENTATION.
   METHOD delete.
 
     DATA lv_response_body TYPE string.
-    DATA lv_http_response_code TYPE integer.
+    DATA lv_http_response_code TYPE i.
 
     cl_http_utility=>set_request_uri(
       request = http_client->request
@@ -501,7 +503,7 @@ CLASS zcl_convertapi_client IMPLEMENTATION.
   METHOD download.
 
     DATA lv_response_body TYPE string.
-    DATA lv_http_response_code TYPE integer.
+    DATA lv_http_response_code TYPE i.
 
     cl_http_utility=>set_request_uri(
       request = http_client->request
@@ -538,7 +540,7 @@ CLASS zcl_convertapi_client IMPLEMENTATION.
     DATA lv_content_disposition_add TYPE string VALUE ''.
     DATA lv_response_body TYPE string.
     DATA ls_response TYPE sty_upload_response_body.
-    DATA lv_http_response_code TYPE integer.
+    DATA lv_http_response_code TYPE i.
 
     IF io_file->convertapi_id IS NOT INITIAL.
       RETURN.
@@ -835,6 +837,16 @@ CLASS zcl_convertapi_client IMPLEMENTATION.
          code   = rv_response_code
       ).
 
+  ENDMETHOD.
+
+  METHOD exception_cleanup.
+    IF me->storage_mode <> zif_convertapi_client=>c_storage_mode-manual.
+        TRY.
+            me->zif_convertapi_client~cleanup(  ).
+        CATCH zcx_convertapi_exception.
+            " do nothing
+        ENDTRY.
+    ENDIF.
   ENDMETHOD.
 
 ENDCLASS.

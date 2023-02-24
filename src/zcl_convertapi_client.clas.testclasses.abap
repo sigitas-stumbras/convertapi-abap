@@ -8,9 +8,9 @@ CLASS ltc_client_test DEFINITION FOR TESTING
   PUBLIC SECTION.
     METHODS: conversion_parameters_test     FOR TESTING RAISING zcx_convertapi_exception.
     METHODS: upload_download_delete         FOR TESTING RAISING zcx_convertapi_exception.
-    METHODS: covert_w_remote_storing        FOR TESTING RAISING zcx_convertapi_exception.
-    METHODS: covert_no_remote_storing       FOR TESTING RAISING zcx_convertapi_exception.
-    METHODS: covert_manual                  FOR TESTING RAISING zcx_convertapi_exception.
+    METHODS: convert_w_remote_storing        FOR TESTING RAISING zcx_convertapi_exception.
+    METHODS: convert_no_remote_storing       FOR TESTING RAISING zcx_convertapi_exception.
+    METHODS: convert_manual                  FOR TESTING RAISING zcx_convertapi_exception.
     METHODS: n_to_1_to_n_w_remote_storing   FOR TESTING RAISING zcx_convertapi_exception.
     METHODS: n_to_1_to_n_no_remote_storing  FOR TESTING RAISING zcx_convertapi_exception.
     METHODS: n_to_1_to_n_manual             FOR TESTING RAISING zcx_convertapi_exception.
@@ -37,16 +37,16 @@ CLASS ltc_client_test DEFINITION FOR TESTING
         io_convertapi_client  TYPE REF TO zcl_convertapi_client
         iv_url                TYPE string
       RETURNING
-        VALUE(rv_status_code) TYPE integer.
+        VALUE(rv_status_code) TYPE i.
 
-    METHODS: covert_1px_gif_to_webp_priv
+    METHODS: convert_1px_gif_to_webp_priv
       IMPORTING
         io_client     TYPE REF TO zif_convertapi_client
         iv_msg_prefix TYPE string
       RAISING
         zcx_convertapi_exception.
 
-    METHODS: covert_2xgif_to_and_from_zip
+    METHODS: convert_2xgif_to_and_from_zip
       IMPORTING
         io_client     TYPE REF TO zif_convertapi_client
         iv_msg_prefix TYPE string
@@ -326,7 +326,7 @@ CLASS ltc_client_test IMPLEMENTATION.
     lv_downloaded_content_3 = lo_file_3->get_content( ).
 
     DATA lv_url TYPE string.
-    DATA lv_status_code TYPE integer.
+    DATA lv_status_code TYPE i.
     DATA lo_client_inst TYPE REF TO zcl_convertapi_client.
 
     lv_url = lo_file->get_convertapi_url(  ).
@@ -346,7 +346,7 @@ CLASS ltc_client_test IMPLEMENTATION.
 
   ENDMETHOD.
 
-  METHOD covert_w_remote_storing.
+  METHOD convert_w_remote_storing.
 
     DATA lo_client TYPE REF TO zif_convertapi_client.
 
@@ -357,7 +357,7 @@ CLASS ltc_client_test IMPLEMENTATION.
         iv_storage_mode = zif_convertapi_client=>c_storage_mode-use_service_storage
       ).
 
-    covert_1px_gif_to_webp_priv(
+    convert_1px_gif_to_webp_priv(
         io_client     = lo_client
         iv_msg_prefix = `REMOTE:`
     ).
@@ -366,7 +366,7 @@ CLASS ltc_client_test IMPLEMENTATION.
 
   ENDMETHOD.
 
-  METHOD covert_no_remote_storing.
+  METHOD convert_no_remote_storing.
 
     DATA lo_client TYPE REF TO zif_convertapi_client.
 
@@ -377,7 +377,7 @@ CLASS ltc_client_test IMPLEMENTATION.
         iv_storage_mode = zif_convertapi_client=>c_storage_mode-no_service_storage
       ).
 
-    covert_1px_gif_to_webp_priv(
+    convert_1px_gif_to_webp_priv(
         io_client     = lo_client
         iv_msg_prefix = `LOCAL:`
     ).
@@ -386,7 +386,7 @@ CLASS ltc_client_test IMPLEMENTATION.
 
   ENDMETHOD.
 
-  METHOD covert_manual.
+  METHOD convert_manual.
 
     DATA lo_client TYPE REF TO zif_convertapi_client.
 
@@ -397,7 +397,7 @@ CLASS ltc_client_test IMPLEMENTATION.
         iv_storage_mode = zif_convertapi_client=>c_storage_mode-manual
       ).
 
-    covert_1px_gif_to_webp_priv(
+    convert_1px_gif_to_webp_priv(
         io_client     = lo_client
         iv_msg_prefix = `LOCAL:`
     ).
@@ -417,7 +417,7 @@ CLASS ltc_client_test IMPLEMENTATION.
         iv_storage_mode = zif_convertapi_client=>c_storage_mode-no_service_storage
       ).
 
-    covert_2xgif_to_and_from_zip(
+    convert_2xgif_to_and_from_zip(
         io_client     = lo_client
         iv_msg_prefix = `REMOTE:`
     ).
@@ -437,7 +437,7 @@ CLASS ltc_client_test IMPLEMENTATION.
         iv_storage_mode = zif_convertapi_client=>c_storage_mode-use_service_storage
       ).
 
-    covert_2xgif_to_and_from_zip(
+    convert_2xgif_to_and_from_zip(
         io_client     = lo_client
         iv_msg_prefix = `REMOTE:`
     ).
@@ -457,7 +457,7 @@ CLASS ltc_client_test IMPLEMENTATION.
         iv_storage_mode = zif_convertapi_client=>c_storage_mode-manual
       ).
 
-    covert_2xgif_to_and_from_zip(
+    convert_2xgif_to_and_from_zip(
         io_client     = lo_client
         iv_msg_prefix = `REMOTE:`
     ).
@@ -466,7 +466,7 @@ CLASS ltc_client_test IMPLEMENTATION.
 
   ENDMETHOD.
 
-  METHOD covert_1px_gif_to_webp_priv.
+  METHOD convert_1px_gif_to_webp_priv.
 
     DATA lo_input_file    TYPE REF TO zif_convertapi_file.
     DATA lo_result_file   TYPE REF TO zif_convertapi_file.
@@ -503,7 +503,7 @@ CLASS ltc_client_test IMPLEMENTATION.
 
   ENDMETHOD.
 
-  METHOD covert_2xgif_to_and_from_zip.
+  METHOD convert_2xgif_to_and_from_zip.
 
     DATA lo_zip   TYPE REF TO zif_convertapi_conversion.
     DATA lo_unzip TYPE REF TO zif_convertapi_conversion.
